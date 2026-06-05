@@ -42,7 +42,8 @@
   }
   set par(justify: true, leading: 0.72em, first-line-indent: indent)
 
-  // --- Chapter (level 1) and section (level 2) headings ---
+  // --- Headings: sans-serif face (Helvetica-style), sized per level ---
+  show heading: set text(font: meta.heading-font)
   show heading.where(level: 1): it => {
     pagebreak(weak: true)
     v(3em)
@@ -79,6 +80,9 @@
     #if meta.publisher != none [#meta.publisher \ ]
     #if meta.rights != none [#meta.rights \ ]
     #if meta.isbn != none [ISBN: #meta.isbn \ ]
+    #if meta.credits != none [#v(0.8em) #meta.credits \ ]
+    #v(0.8em)
+    Formatted with Pandoc and Typst.
   ]
 
   // Table of contents. The title is plain styled text, NOT a heading, so it
