@@ -2,8 +2,9 @@
 # installed on the host.
 FROM pandoc/typst:latest
 
-# Python + PyYAML for the kpc CLI. (pandoc and typst already ship in the base.)
-RUN apk add --no-cache python3 py3-yaml
+# Python + PyYAML for the kpc CLI; Liberation Sans (Helvetica-metric) for
+# headings. (pandoc and typst already ship in the base.)
+RUN apk add --no-cache python3 py3-yaml font-liberation
 
 COPY kpc /opt/kpc
 COPY templates /opt/templates
