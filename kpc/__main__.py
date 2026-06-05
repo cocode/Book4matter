@@ -114,11 +114,13 @@ def render_meta(cfg, pages):
         f"  publisher: {opt('publisher')},\n"
         f"  rights: {opt('rights')},\n"
         f"  isbn: {opt('isbn')},\n"
+        f"  credits: {opt('credits')},\n"
         f"  language: {typst_str(cfg.get('language', 'en'))},\n"
         f"  trim: (width: {w}in, height: {h}in),\n"
         f"  margins: (inside: {inside}in, outside: {outside}in, "
         f"top: {top}in, bottom: {bottom}in),\n"
         f"  font: {typst_str(cfg.get('font', 'Libertinus Serif'))},\n"
+        f"  heading-font: {typst_str(cfg.get('heading-font', 'Liberation Sans'))},\n"
         f"  font-size: {font_size},\n"
         f"  toc: {str(bool(cfg.get('toc', True))).lower()},\n"
         ")\n"
@@ -164,7 +166,12 @@ def build(bookdir, pages=None, keep=False):
          "-o", str(out / "_body.typ")])
     (out / "main.typ").write_text(MAIN_TYP)
 
-    pdf = out / "interior.pdf"
+    # Name the PDF after the book so a multi-book setup doesn't end up with
+    # several files all called interior.pdf. Keep the "-interior" suffix to
+    # match KDP's convention (interior vs cover are submitted separately).
+    title = cfg.get("title")
+    slug = slugify(title) if title else bookdir.name
+    pdf = out / f"{slug}-interior.pdf"
     run(["typst", "compile", "--root", str(bookdir),
          str(out / "main.typ"), str(pdf)])
 
