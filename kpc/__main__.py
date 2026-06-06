@@ -23,6 +23,12 @@ MAIN_TYP = '''#import "book.typ": book
 #include "_body.typ"
 '''
 
+# Imports prepended to the generated _body.typ so raw typst blocks inside
+# chapter markdown (e.g. `wrap-content(...)`) can find their bindings; typst's
+# `#include` does not re-export the outer file's imports.
+BODY_PRELUDE = '''#import "@preview/wrap-it:0.1.1": wrap-content
+'''
+
 
 def die(msg):
     print(f"kpc: error: {msg}", file=sys.stderr)
@@ -163,7 +169,10 @@ def build(bookdir, pages=None, keep=False):
     (out / "_meta.typ").write_text(render_meta(cfg, pages))
     run(["pandoc", *[str(c) for c in chapters],
          "-f", "markdown", "-t", "typst", "--wrap=preserve",
+         f"--lua-filter={TEMPLATES / 'wrap.lua'}",
          "-o", str(out / "_body.typ")])
+    body_path = out / "_body.typ"
+    body_path.write_text(BODY_PRELUDE + body_path.read_text())
     (out / "main.typ").write_text(MAIN_TYP)
 
     # Name the PDF after the book so a multi-book setup doesn't end up with

@@ -10,6 +10,8 @@
 // Entry point: `#show: book.with(meta)`, where `meta` is the dictionary the kpc
 // CLI generates from book.yaml.
 
+#import "@preview/wrap-it:0.1.1": wrap-content
+
 #let book(meta, body) = {
   // --- PDF document metadata ---
   set document(title: meta.title, author: meta.authors)
@@ -47,7 +49,7 @@
   show heading.where(level: 1): it => {
     pagebreak(weak: true)
     v(3em)
-    set text(size: 1.7em, weight: "bold")
+    set text(size: 1.4em, weight: "bold")
     block(below: 1.2em, it.body)
   }
   show heading.where(level: 2): it => {
