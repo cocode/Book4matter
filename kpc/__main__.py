@@ -169,6 +169,7 @@ def build(bookdir, pages=None, keep=False):
     (out / "_meta.typ").write_text(render_meta(cfg, pages))
     run(["pandoc", *[str(c) for c in chapters],
          "-f", "markdown", "-t", "typst", "--wrap=preserve",
+         f"--lua-filter={TEMPLATES / 'parts.lua'}",
          f"--lua-filter={TEMPLATES / 'wrap.lua'}",
          "-o", str(out / "_body.typ")])
     body_path = out / "_body.typ"

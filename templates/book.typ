@@ -45,14 +45,30 @@
   set par(justify: true, leading: 0.72em, first-line-indent: indent)
 
   // --- Headings: sans-serif face (Helvetica-style), sized per level ---
+  //
+  // Level 1 = part divider (own page, vertically centred title).
+  // Level 2 = chapter       (page break, large heading at top).
+  // Level 3 = section       (bold, spaced from preceding text).
+  // Level 4+ = default typst heading styling.
   show heading: set text(font: meta.heading-font)
   show heading.where(level: 1): it => {
+    pagebreak(weak: true)
+    set align(center)
+    // Disable hyphenation here so a long title wraps on a space rather than
+    // breaking a word ("Varia-/tions"). Body text still hyphenates.
+    set text(size: 2em, weight: "bold", hyphenate: false)
+    v(1fr)
+    block(it.body)
+    v(1fr)
+    pagebreak(weak: true)
+  }
+  show heading.where(level: 2): it => {
     pagebreak(weak: true)
     v(3em)
     set text(size: 1.4em, weight: "bold")
     block(below: 1.2em, it.body)
   }
-  show heading.where(level: 2): it => {
+  show heading.where(level: 3): it => {
     v(1.2em, weak: true)
     set text(size: 1.2em, weight: "bold")
     block(below: 0.6em, it.body)
