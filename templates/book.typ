@@ -12,6 +12,14 @@
 
 #import "@preview/wrap-it:0.1.1": wrap-content
 
+// Chapter numbering. A plain `state` (not `set heading(numbering:)`) so the
+// chapter number runs straight 1, 2, 3... regardless of any enclosing Part
+// divider. The `unnumbered-next` state is flipped on by parts.lua just before
+// a `{.unnumbered}` chapter so the level-2 show rule skips the label and
+// leaves the count alone.
+#let chapter-num = state("chapter-num", 0)
+#let unnumbered-next = state("unnumbered-next", false)
+
 #let book(meta, body) = {
   // --- PDF document metadata ---
   set document(title: meta.title, author: meta.authors)
@@ -49,7 +57,8 @@
   // Level 1 = part divider (own page, vertically centred title).
   // Level 2 = chapter       (page break, large heading at top).
   // Level 3 = section       (bold, spaced from preceding text).
-  // Level 4+ = default typst heading styling.
+  // Level 4 = subsection    (bold sans, body size).
+  // Level 5+ = regular-weight sans (still distinguished from body serif).
   show heading: set text(font: meta.heading-font)
   show heading.where(level: 1): it => {
     pagebreak(weak: true)
@@ -58,20 +67,51 @@
     // breaking a word ("Varia-/tions"). Body text still hyphenates.
     set text(size: 2em, weight: "bold", hyphenate: false)
     v(1fr)
-    block(it.body)
+    block(upper(it.body))
     v(1fr)
     pagebreak(weak: true)
   }
   show heading.where(level: 2): it => {
     pagebreak(weak: true)
     v(3em)
+    context {
+      if unnumbered-next.get() {
+        unnumbered-next.update(false)
+      } else {
+        // Function-form update — the increment is independent of get(), so
+        // Typst's iterative layout converges. A value-form update whose
+        // argument reads get() will stall (every chapter past a certain
+        // point ends up sharing the same number).
+        chapter-num.update(prev => prev + 1)
+        text(size: 0.9em, weight: "regular")[
+          CHAPTER #context chapter-num.get()
+        ]
+        parbreak()
+        v(0.4em)
+      }
+    }
     set text(size: 1.4em, weight: "bold")
-    block(below: 1.2em, it.body)
+    block(upper(it.body))
+    // Hard (non-weak) space so it survives next to a level-3 heading or a
+    // chapter that page-breaks immediately after the title.
+    v(4em)
   }
   show heading.where(level: 3): it => {
-    v(1.2em, weak: true)
+    v(2.4em, weak: true)
     set text(size: 1.2em, weight: "bold")
-    block(below: 0.6em, it.body)
+    block(below: 0.6em, upper(it.body))
+  }
+  show heading.where(level: 4): it => {
+    v(2em, weak: true)
+    block(below: 0.4em, text(weight: "bold", size: 1em, upper(it.body)))
+  }
+  show heading.where(level: 5): it => {
+    v(2em, weak: true)
+    block(below: 0.4em, text(weight: "regular", size: 1em, upper(it.body)))
+  }
+  show heading.where(level: 6): it => {
+    v(2em, weak: true)
+    block(below: 0.4em, text(weight: "regular", size: 1em, upper(it.body)))
   }
 
   // ===================== FRONT MATTER (no page numbers) =====================
