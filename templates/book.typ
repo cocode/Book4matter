@@ -105,6 +105,14 @@
 
   // Table of contents. The title is plain styled text, NOT a heading, so it
   // does not trip the level-1 chapter `pagebreak` show rule above.
+  //
+  // The parts.lua filter splits "Part I - About This Book" across two lines
+  // so the part-divider page can stack them. In the contents we want them on
+  // one line, so flatten the linebreak back to " - " for level-1 entries.
+  show outline.entry.where(level: 1): it => {
+    show linebreak: _ => " - "
+    it
+  }
   if meta.toc {
     page(numbering: none)[
       #v(3em)
