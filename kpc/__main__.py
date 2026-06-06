@@ -169,8 +169,12 @@ def build(bookdir, pages=None, keep=False):
     (out / "_meta.typ").write_text(render_meta(cfg, pages))
     run(["pandoc", *[str(c) for c in chapters],
          "-f", "markdown", "-t", "typst", "--wrap=preserve",
-         f"--lua-filter={TEMPLATES / 'parts.lua'}",
+         # wrap.lua first so it packages its body before parts.lua starts
+         # inserting raw `#pagebreak()` blocks between sibling headings; if
+         # the order were reversed, a pagebreak would land inside a wrap
+         # body and typst rejects pagebreaks inside content blocks.
          f"--lua-filter={TEMPLATES / 'wrap.lua'}",
+         f"--lua-filter={TEMPLATES / 'parts.lua'}",
          "-o", str(out / "_body.typ")])
     body_path = out / "_body.typ"
     body_path.write_text(BODY_PRELUDE + body_path.read_text())
