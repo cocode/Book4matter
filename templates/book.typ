@@ -99,19 +99,19 @@
   show heading.where(level: 3): it => {
     v(2.4em, weak: true)
     set text(size: 1.2em, weight: "bold")
-    block(below: 0.6em, upper(it.body))
+    block(below: 1em, upper(it.body))
   }
   show heading.where(level: 4): it => {
     v(2em, weak: true)
-    block(below: 0.4em, text(weight: "bold", size: 1em, upper(it.body)))
+    block(below: 1em, text(weight: "bold", size: 1em, upper(it.body)))
   }
   show heading.where(level: 5): it => {
     v(2em, weak: true)
-    block(below: 0.4em, text(weight: "regular", size: 1em, upper(it.body)))
+    block(below: 1em, text(weight: "regular", size: 1em, upper(it.body)))
   }
   show heading.where(level: 6): it => {
     v(2em, weak: true)
-    block(below: 0.4em, text(weight: "regular", size: 1em, upper(it.body)))
+    block(below: 1em, text(weight: "regular", size: 1em, upper(it.body)))
   }
 
   // ===================== FRONT MATTER (no page numbers) =====================
