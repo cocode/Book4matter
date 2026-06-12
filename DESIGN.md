@@ -89,15 +89,29 @@ margins:                       # inches; omit to use page-count-based defaults
   top: 0.75
   bottom: 0.75
 
-font: "Libertinus Serif"
+font: "Libertinus Serif"       # body face (must be findable; see fonts/ below)
+heading-font: "Liberation Sans" # title page, part/chapter labels, headings
 font-size: 11pt
 line-height: 1.4
 toc: true
 
 chapters:                      # optional explicit order
-  - chapters/01-introduction.md
-  - chapters/02-on-typography.md
+  - chapters/010-introduction.md
+  - chapters/020-on-typography.md
 ```
+
+### Custom fonts (print)
+
+Drop `.ttf` / `.otf` files into `<bookdir>/fonts/` and reference them by family
+name from `font:` / `heading-font:` in `book.yaml`. `kpc print` automatically
+passes `--font-path <bookdir>/fonts` to typst when the directory exists, so the
+fonts travel with the book project (no system installs, no image rebuilds).
+System fonts are still searched, so a missing `fonts/` dir is fine. The font's
+license must permit embedding in a PDF — the build will silently embed
+whatever's used.
+
+EPUB intentionally does NOT embed custom fonts; `epub.css` specifies generic
+`serif` / `sans-serif` families and lets the reader device pick.
 
 ## `.docx` import
 
@@ -109,16 +123,18 @@ manuscript.docx
    │  pandoc (docx → pandoc-markdown, --extract-media)
    ▼
 fence-aware split on every level-1 heading
-   ├─▶ chapters/00-frontmatter.md   (content before the first H1, for review)
-   ├─▶ chapters/01-slug.md, 02-slug.md …
+   ├─▶ chapters/000-frontmatter.md  (content before the first H1, for review)
+   ├─▶ chapters/010-slug.md, 020-slug.md …
    └─▶ media/                       (extracted images)
 ```
 
 - **Markdown flavor:** Pandoc Markdown — most faithful to the Word source and
   round-trips perfectly into the build. Hand-cleanup is expected afterward.
 - **Split:** fence-aware, so a `#` inside a code block is never mistaken for a
-  chapter break. Content before the first H1 goes to `00-frontmatter.md` (the
+  chapter break. Content before the first H1 goes to `000-frontmatter.md` (the
   template generates its own title page + TOC, so this is usually trimmed).
+- **Numbering:** three-digit, step-of-10 (`010`, `020`, …). Leaves gaps to slot
+  hand-written inserts (part dividers, appendices) without renumbering siblings.
 - **Images:** extracted to `media/`; chapter files reference them as
   `../media/…` so they resolve both in the build and in Markdown previews.
 - `--track-changes=accept`, comments dropped, ATX headings, no hard-wrapping.
@@ -153,13 +169,14 @@ gutter.
 - **Docker image:** `FROM pandoc/typst` + `python3` + `py3-yaml`. The `kpc` CLI
   and `templates/` are copied in. `ENTRYPOINT` is `python3 -m kpc`.
 - **CLI (`kpc`):** a thin Python orchestrator.
-  - `kpc build [bookdir] [--pages N] [--keep]`
+  - `kpc print [bookdir] [--pages N] [--keep]`
+  - `kpc epub  [bookdir] [--no-check]`
   - `kpc import <file.docx> [bookdir] [--no-split] [--force]`
 - **Host wrapper (`run.sh`):** builds the image if missing, then runs the
   container with the current directory mounted at `/work`.
 
 ```bash
-./run.sh build example/          # → example/out/interior.pdf
+./run.sh print example/          # → example/out/interior.pdf
 ./run.sh import manuscript.docx  # → chapters/*.md + media/
 ```
 
