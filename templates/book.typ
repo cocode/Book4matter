@@ -15,6 +15,14 @@
 // Chapter and Part numbering. Plain `state` counters (not `set heading(
 // numbering:)`) so each runs its own straight 1, 2, 3... — chapter numbers
 // do not reset across parts, and parts are counted independently of chapters.
+//
+// `chapter-num` increments inside the H2 show rule. `part-num` is instead
+// driven by parts.lua, which emits `#part-num.update(N)` just before each
+// numbered part heading: the update then precedes the heading's queryable
+// location, so the table of contents can recover a part's number with
+// `part-num.at(<heading location>)`. (A counter incremented inside the show
+// rule lands *after* that location and reads off by one from the outline.)
+//
 // The `unnumbered-next` state is flipped on by parts.lua just before a
 // `{.unnumbered}` heading so the matching show rule skips the auto label and
 // leaves the count alone. One flag for both levels: it's consumed by the very
@@ -23,6 +31,15 @@
 #let chapter-num = state("chapter-num", 0)
 #let part-num = state("part-num", 0)
 #let unnumbered-next = state("unnumbered-next", false)
+
+// Spelled-out part ordinals for the contents page ("PART TWO · BASICS").
+// Books with more than twenty parts fall back to the bare numeral.
+#let part-words = ("One", "Two", "Three", "Four", "Five", "Six", "Seven",
+  "Eight", "Nine", "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen",
+  "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen", "Twenty")
+#let part-word(n) = if n >= 1 and n <= part-words.len() {
+  part-words.at(n - 1)
+} else { str(n) }
 
 #let book(meta, body) = {
   // --- PDF document metadata ---
@@ -38,6 +55,13 @@
       top: meta.margins.top,
       bottom: meta.margins.bottom,
     ),
+    // Front matter carries roman folios (i, ii, iii...). The explicit page()
+    // calls below (title, copyright, also-by) override this with
+    // `numbering: none` — blind folios that still advance the page counter —
+    // while the contents page and any front-matter chapters (an introduction
+    // before the first part) display theirs. parts.lua injects the switch to
+    // arabic numbering at the start of the main matter.
+    numbering: "i",
   )
 
   // --- Body text & paragraphs ---
@@ -75,9 +99,8 @@
       if unnumbered-next.get() {
         unnumbered-next.update(false)
       } else {
-        // Function-form update for the same reason as chapter-num below:
-        // value-form updates that read get() can stall Typst's layout loop.
-        part-num.update(prev => prev + 1)
+        // part-num was already set by the `#part-num.update(N)` block that
+        // parts.lua emitted just before this heading; here we only read it.
         block(text(size: 1.2em, weight: "regular")[
           PART #context part-num.get()
         ])
@@ -133,7 +156,7 @@
     block(below: 1em, text(weight: "regular", size: 1em, upper(it.body)))
   }
 
-  // ===================== FRONT MATTER (no page numbers) =====================
+  // ============ FRONT MATTER (roman folios; display pages blind) ============
 
   // Title page. Title + subtitle share the heading font (sans) so the
   // subtitle reads as a smaller sibling of the title rather than slipping
@@ -217,27 +240,68 @@
   }
 
   // Table of contents. The title is plain styled text, NOT a heading, so it
-  // does not trip the level-1 chapter `pagebreak` show rule above.
+  // does not trip the level-1 part `pagebreak` show rule above.
   //
-  // The parts.lua filter splits "Part I - About This Book" across two lines
-  // so the part-divider page can stack them. In the contents we want them on
-  // one line, so flatten the linebreak back to " - " for level-1 entries.
+  // Custom entry rendering replaces typst's default outline (dot leaders,
+  // flat hierarchy): no leaders, page numbers in a right-aligned tabular
+  // column, part entries set off by space and styled as letterspaced caps
+  // with the part number spelled out ("PART TWO · BASICS"), chapter entries
+  // indented beneath their part. Page numbers render in the numbering style
+  // of the page they point at, so entries for front-matter chapters (an
+  // introduction before Part One) show roman folios.
   show outline.entry.where(level: 1): it => {
-    show linebreak: _ => " - "
-    it
+    // A forced linebreak inside a part title would wreck the one-line entry.
+    show linebreak: _ => " "
+    block(above: 1.5em, link(it.element.location(), context {
+      set text(size: 0.85em, fill: luma(40%))
+      // Both states were set by parts.lua *before* the heading, so reading
+      // them at the heading's location is reliable (see note at the top).
+      let prefix = if unnumbered-next.at(it.element.location()) { "" } else {
+        "Part " + part-word(part-num.at(it.element.location())) + " · "
+      }
+      grid(
+        columns: (1fr, auto),
+        column-gutter: 1.5em,
+        align: (left + bottom, right + bottom),
+        text(tracking: 0.12em, upper[#prefix#it.body()]),
+        it.page(),
+      )
+    }))
+  }
+  show outline.entry.where(level: 2): it => {
+    show linebreak: _ => " "
+    block(above: 0.65em, link(it.element.location(), context {
+      // Chapters indent beneath their part; a front-matter chapter before
+      // the first part (an introduction) sits flush left.
+      let indent = if query(heading.where(level: 1)
+        .before(it.element.location())).len() > 0 { 1em } else { 0pt }
+      grid(
+        columns: (1fr, auto),
+        column-gutter: 1.5em,
+        align: (left + bottom, right + bottom),
+        pad(left: indent, it.body()),
+        it.page(),
+      )
+    }))
   }
   if meta.toc {
-    page(numbering: none)[
-      #v(3em)
-      #text(size: 1.7em, weight: "bold")[Contents]
-      #v(1.2em)
-      #outline(title: none, depth: 2, indent: auto)
+    page[
+      #set par(justify: false)
+      #v(2em)
+      #text(font: meta.heading-font, size: 2em)[Contents]
+      #v(0.5em)
+      #line(length: 100%, stroke: 0.6pt)
+      #outline(title: none, depth: 2)
     ]
   }
 
-  // ===================== MAIN MATTER (page numbers from 1) ==================
-  set page(numbering: "1")
-  counter(page).update(1)
-
+  // ================================ BODY =====================================
+  // Front matter continues into the body: everything up to the first part
+  // heading (e.g. an introduction) keeps the roman folios set above.
+  // parts.lua injects
+  //     #set page(numbering: "1")
+  //     #counter(page).update(1)
+  // just before the first part heading — or at the very top of a book with
+  // no parts — which is where the main matter and arabic page numbers begin.
   body
 }

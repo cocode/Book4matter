@@ -25,9 +25,13 @@ MAIN_TYP = '''#import "book.typ": book
 '''
 
 # Imports prepended to the generated _body.typ so raw typst blocks inside
-# chapter markdown (e.g. `wrap-content(...)`) can find their bindings; typst's
-# `#include` does not re-export the outer file's imports.
+# chapter markdown (e.g. `wrap-content(...)`) and blocks emitted by parts.lua
+# (`#part-num.update(N)`, `#unnumbered-next.update(true)`) can find their
+# bindings; typst's `#include` does not re-export the outer file's imports.
+# book.typ is copied into out/ alongside _body.typ, so the relative import
+# resolves.
 BODY_PRELUDE = '''#import "@preview/wrap-it:0.1.1": wrap-content
+#import "book.typ": part-num, unnumbered-next
 '''
 
 
