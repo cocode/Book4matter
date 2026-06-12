@@ -1,8 +1,9 @@
-"""kpc - turn Markdown into a KDP print-ready PDF.
+"""kpc - turn Markdown into a KDP print-ready PDF or a KDP-ready EPUB.
 
-Runs inside the pandoc/typst Docker image. Two subcommands:
+Runs inside the pandoc/typst Docker image. Subcommands:
 
-    kpc build  [bookdir] [--pages N] [--keep]
+    kpc print  [bookdir] [--pages N] [--keep]
+    kpc epub   [bookdir] [--no-check]
     kpc import <file.docx> [bookdir] [--no-split] [--force]
 """
 import argparse
@@ -100,7 +101,46 @@ def typst_array(items):
     return f"({inner},)" if len(items) == 1 else f"({inner})"
 
 
-def render_meta(cfg, pages):
+def _norm_asset(path):
+    """Root-absolute typst path so image() resolves from the book root, not
+    from out/ where the generated .typ files live."""
+    p = str(path)
+    return p if p.startswith("/") else "/" + p
+
+
+def render_also_by(cfg):
+    """Serialize the optional `also-by:` list into a Typst array of dicts.
+
+    Each entry may set title (required), cover, qr, url; missing fields render
+    as `none`. A bare string is treated as a title-only entry."""
+    works = cfg.get("also-by") or []
+    parts = []
+    for w in works:
+        if isinstance(w, str):
+            w = {"title": w}
+
+        def field(key, asset=False):
+            v = w.get(key)
+            if v in (None, ""):
+                return "none"
+            return typst_str(_norm_asset(v) if asset else v)
+
+        parts.append(
+            f"(title: {field('title')}, cover: {field('cover', True)}, "
+            f"qr: {field('qr', True)}, url: {field('url')})"
+        )
+    return typst_array_raw(parts)
+
+
+def typst_array_raw(items):
+    """Wrap already-serialized Typst snippets as an array (trailing comma so a
+    single-element array isn't read as a parenthesized group)."""
+    if not items:
+        return "()"
+    return "(" + ", ".join(items) + ("," if len(items) == 1 else "") + ")"
+
+
+def render_meta(cfg, pages, build_id=None):
     w, h = parse_trim(cfg)
     inside, outside, top, bottom = resolve_margins(cfg, pages)
 
@@ -111,6 +151,8 @@ def render_meta(cfg, pages):
     font_size = cfg.get("font-size", "11pt")
     if isinstance(font_size, (int, float)):
         font_size = f"{font_size}pt"
+
+    build_id_typ = typst_str(build_id) if build_id else "none"
 
     return (
         "#let meta = (\n"
@@ -129,6 +171,8 @@ def render_meta(cfg, pages):
         f"  heading-font: {typst_str(cfg.get('heading-font', 'Liberation Sans'))},\n"
         f"  font-size: {font_size},\n"
         f"  toc: {str(bool(cfg.get('toc', True))).lower()},\n"
+        f"  also-by: {render_also_by(cfg)},\n"
+        f"  build-id: {build_id_typ},\n"
         ")\n"
     )
 
@@ -156,7 +200,7 @@ def resolve_chapters(bookdir, cfg):
 
 # ---------------------------------------------------------------------- build
 
-def build(bookdir, pages=None, keep=False):
+def build_print(bookdir, pages=None, keep=False, build_id=None):
     bookdir = bookdir.resolve()
     cfg = load_config(bookdir / "book.yaml")
     chapters = resolve_chapters(bookdir, cfg)
@@ -166,7 +210,7 @@ def build(bookdir, pages=None, keep=False):
     out.mkdir(exist_ok=True)
 
     shutil.copy(TEMPLATES / "book.typ", out / "book.typ")
-    (out / "_meta.typ").write_text(render_meta(cfg, pages))
+    (out / "_meta.typ").write_text(render_meta(cfg, pages, build_id=build_id))
     run(["pandoc", *[str(c) for c in chapters],
          "-f", "markdown", "-t", "typst", "--wrap=preserve",
          # wrap.lua first so it packages its body before parts.lua starts
@@ -186,13 +230,111 @@ def build(bookdir, pages=None, keep=False):
     title = cfg.get("title")
     slug = slugify(title) if title else bookdir.name
     pdf = out / f"{slug}-interior.pdf"
-    run(["typst", "compile", "--root", str(bookdir),
-         str(out / "main.typ"), str(pdf)])
+    # Optional per-book font directory. Drop .ttf/.otf files into
+    # <bookdir>/fonts/ and reference the family name from book.yaml's `font:` /
+    # `heading-font:` keys; typst resolves by family name from --font-path
+    # entries plus the system. System fonts are still searched so the build
+    # works even with no fonts/ dir.
+    typst_cmd = ["typst", "compile", "--root", str(bookdir)]
+    fonts_dir = bookdir / "fonts"
+    if fonts_dir.is_dir():
+        typst_cmd += ["--font-path", str(fonts_dir)]
+    typst_cmd += [str(out / "main.typ"), str(pdf)]
+    run(typst_cmd)
 
     if not keep:
         for f in ("book.typ", "_meta.typ", "_body.typ", "main.typ"):
             (out / f).unlink(missing_ok=True)
     print(f"✓ wrote {pdf}")
+
+
+# ----------------------------------------------------------------------- epub
+
+def _epub_metadata(cfg, build_id=None):
+    """Translate book.yaml into the metadata pandoc's EPUB writer expects.
+
+    Pandoc reads `title`, `subtitle`, `author` (string or list), `lang`,
+    `publisher`, `rights`, `date`, `identifier`. Our book.yaml uses `language`
+    and `year`, so we remap. Anything not set is omitted entirely so pandoc
+    doesn't emit empty <dc:*> elements that epubcheck would warn about.
+    """
+    meta = {}
+    if cfg.get("title"):     meta["title"] = cfg["title"]
+    if cfg.get("subtitle"):  meta["subtitle"] = cfg["subtitle"]
+    authors = authors_list(cfg)
+    if authors:              meta["author"] = authors
+    if cfg.get("publisher"): meta["publisher"] = cfg["publisher"]
+    rights = cfg.get("rights")
+    if build_id:
+        printing = f"Printing: {build_id}"
+        rights = f"{rights} {printing}" if rights else printing
+    if rights:               meta["rights"] = rights
+    meta["lang"] = cfg.get("language", "en")
+    if cfg.get("year"):      meta["date"] = str(cfg["year"])
+    isbn = cfg.get("isbn")
+    if isbn:
+        # `scheme` puts the right onix:identifier-scheme on the <dc:identifier>;
+        # without it readers just see an opaque string.
+        meta["identifier"] = {"text": str(isbn), "scheme": "ISBN-13"}
+    return meta
+
+
+def build_epub(bookdir, check=True, build_id=None):
+    bookdir = bookdir.resolve()
+    cfg = load_config(bookdir / "book.yaml")
+    chapters = resolve_chapters(bookdir, cfg)
+    if not chapters:
+        die("no chapter .md files found")
+    out = bookdir / "out"
+    out.mkdir(exist_ok=True)
+
+    meta_path = out / "_epub_meta.yaml"
+    meta_path.write_text(yaml.safe_dump(_epub_metadata(cfg, build_id=build_id),
+                                        sort_keys=False, allow_unicode=True))
+
+    title = cfg.get("title")
+    slug = slugify(title) if title else bookdir.name
+    epub = out / f"{slug}.epub"
+
+    cmd = ["pandoc", *[str(c) for c in chapters],
+           "-f", "markdown", "-t", "epub3",
+           "--wrap=preserve",
+           # depth=2 -> parts (h1) + chapters (h2) only; deeper headings are
+           # still in-document but don't clutter the EPUB nav.
+           "--toc", "--toc-depth=2",
+           # epub-wrap rewrites .wrap-right/.wrap-left images into <figure>s
+           # with the class on the figure (CSS does the float). epub-parts
+           # splits "Part I - Title" headings into two lines and strips
+           # print-only heading classes that would otherwise leak into HTML.
+           f"--lua-filter={TEMPLATES / 'epub-wrap.lua'}",
+           f"--lua-filter={TEMPLATES / 'epub-parts.lua'}",
+           f"--css={TEMPLATES / 'epub.css'}",
+           f"--metadata-file={meta_path}",
+           # Chapters live in bookdir/chapters/ and reference images as
+           # ../media/x; resolved from the chapters dir that becomes
+           # bookdir/media/x. Also list bookdir itself so absolute-from-root
+           # paths and chapter files written at the book root both work.
+           f"--resource-path={bookdir / 'chapters'}:{bookdir}",
+           "-o", str(epub)]
+
+    cover = cfg.get("cover")
+    if cover:
+        cover_path = (bookdir / cover).resolve()
+        if not cover_path.exists():
+            die(f"cover image not found: {cover_path}")
+        cmd.insert(-2, f"--epub-cover-image={cover_path}")
+
+    run(cmd, cwd=str(bookdir))
+    meta_path.unlink(missing_ok=True)
+
+    if check:
+        # epubcheck exits non-zero on errors; warnings still print but pass.
+        # Run inside the same container so the host doesn't need Java.
+        try:
+            run(["epubcheck", str(epub)])
+        except subprocess.CalledProcessError:
+            die(f"epubcheck found errors in {epub}")
+    print(f"✓ wrote {epub}")
 
 
 # --------------------------------------------------------------------- import
@@ -310,14 +452,17 @@ def import_docx(docx, bookdir, split=True, force=False):
     text = _rebase_images(text)
     chunks = split_chapters(text) if split else [(None, text.splitlines())]
 
+    # Three-digit, step-of-10 numbering leaves room to slot inserts (a part
+    # divider, an appendix, a split-out section) between imported chapters
+    # without renumbering the whole set: 010, 020, 030 — insert 015 freely.
     written, n = [], 0
     for title, lines in chunks:
         body = "\n".join(lines).strip() + "\n"
         if title is None:
-            name = "00-frontmatter.md"
+            name = "000-frontmatter.md"
         else:
-            n += 1
-            name = f"{n:02d}-{slugify(title)}.md"
+            n += 10
+            name = f"{n:03d}-{slugify(title)}.md"
         (chapters_dir / name).write_text(body)
         written.append(name)
 
@@ -340,13 +485,23 @@ def main(argv=None):
                                 description="Markdown -> KDP print-ready PDF")
     sub = p.add_subparsers(dest="cmd", required=True)
 
-    b = sub.add_parser("build", help="build interior PDF from a book directory")
+    b = sub.add_parser("print", help="build interior PDF from a book directory")
     b.add_argument("bookdir", nargs="?", default=".",
                    help="book directory (contains book.yaml, chapters/)")
     b.add_argument("--pages", type=int, default=None,
                    help="estimated page count, to pick a KDP-appropriate gutter")
     b.add_argument("--keep", action="store_true",
                    help="keep intermediate .typ files in out/")
+    b.add_argument("--build-id", default=None,
+                   help="printing identifier (e.g. git short hash) shown on copyright page")
+
+    e = sub.add_parser("epub", help="build an EPUB3 from a book directory")
+    e.add_argument("bookdir", nargs="?", default=".",
+                   help="book directory (contains book.yaml, chapters/)")
+    e.add_argument("--no-check", dest="check", action="store_false",
+                   help="skip running epubcheck on the result")
+    e.add_argument("--build-id", default=None,
+                   help="printing identifier appended to rights metadata")
 
     i = sub.add_parser("import", help="import a .docx into chapters/*.md")
     i.add_argument("docx", help="path to the .docx file")
@@ -357,8 +512,11 @@ def main(argv=None):
                    help="overwrite an existing non-empty chapters/ directory")
 
     args = p.parse_args(argv)
-    if args.cmd == "build":
-        build(Path(args.bookdir), pages=args.pages, keep=args.keep)
+    if args.cmd == "print":
+        build_print(Path(args.bookdir), pages=args.pages, keep=args.keep,
+                    build_id=args.build_id)
+    elif args.cmd == "epub":
+        build_epub(Path(args.bookdir), check=args.check, build_id=args.build_id)
     else:
         import_docx(Path(args.docx), Path(args.bookdir),
                     split=args.split, force=args.force)
