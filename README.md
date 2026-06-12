@@ -1,5 +1,7 @@
 # KindlePandocCreator
 
+./rotary was moved to ~/Documents/Writing/Dance/Why/rotary
+
 Markdown -> print-ready **6x9 KDP paperback interior PDF**, via Pandoc -> Typst,
 entirely inside Docker. See [DESIGN.md](DESIGN.md) for the full design and
 rationale.
@@ -13,13 +15,13 @@ rationale.
 Build the bundled example:
 
 ```bash
-./run.sh build example/          # -> example/out/interior.pdf
+./run.sh print example/          # -> example/out/interior.pdf
 ```
 
 Build your own book (a directory containing `book.yaml` and `chapters/*.md`):
 
 ```bash
-./run.sh build path/to/book/
+./run.sh print path/to/book/
 ```
 
 Import a Word manuscript (splits into chapters on each Heading 1):
@@ -32,7 +34,13 @@ The first run builds the Docker image. After changing the template or CLI, force
 a rebuild:
 
 ```bash
-./run.sh --rebuild build example/
+./run.sh --rebuild print example/
+```
+
+To rebuild the image without running a build:
+
+```bash
+docker build -t kindle-pandoc-creator .
 ```
 
 ## Book layout
