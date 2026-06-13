@@ -1,5 +1,9 @@
 # Typesetting features, in priority order
 
+DO NOT BLINDLY IMPLEMENT THESE. These are ideas, many of the bad ideas.
+
+Only implmement what you are told to do by the user, directly.
+
 Source: visual design review of the rotary book interior
 (`the-rotary-waltz-interior.pdf`, build `b72c403c09-dirty`, 2026-06-12).
 Page references below are printed folios in that build (folio = PDF page − 5).
