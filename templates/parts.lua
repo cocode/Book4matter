@@ -13,7 +13,12 @@
 --   3. marks where the main matter begins (the first part heading), so the
 --      template's roman front-matter folios switch to arabic numbering
 --      there. Anything before the first part — an introduction, a preface —
---      is front matter: roman folios, listed in the contents before Part One.
+--      is front matter: roman folios, listed in the contents before Part One;
+--   4. gathers divider text: blocks between a part heading and the next
+--      heading (i.e. text written under the part title in the part's own
+--      chapter file) are wrapped in `#part-text[...]` so they print on the
+--      divider page itself, beneath the title, instead of spilling onto the
+--      following page.
 
 -- Pandoc does not put a --lua-filter's directory on package.path, so a plain
 -- `require("_common")` would fail. PANDOC_SCRIPT_FILE is the absolute path
@@ -37,7 +42,9 @@ local part_count = 0
 --                     levels because it's consumed by the very next heading.
 function Blocks(blocks)
   local out = pandoc.List()
-  for _, b in ipairs(blocks) do
+  local i = 1
+  while i <= #blocks do
+    local b = blocks[i]
     if b.t == "Header" then
       if common.pop_class(b, "new-page") then
         out:insert(pandoc.RawBlock("typst", "#pagebreak(weak: true)"))
@@ -49,8 +56,33 @@ function Blocks(blocks)
         out:insert(pandoc.RawBlock("typst",
           "#part-num.update(" .. part_count .. ")"))
       end
+      if b.level == 1 then
+        -- Divider text: everything up to the next heading belongs on the
+        -- part page. The flag must precede the heading (its show rule
+        -- consumes it), so look ahead before emitting anything.
+        local last = i
+        while last + 1 <= #blocks and blocks[last + 1].t ~= "Header" do
+          last = last + 1
+        end
+        if last > i then
+          out:insert(pandoc.RawBlock("typst", "#part-text-next.update(true)"))
+          out:insert(b)
+          out:insert(pandoc.RawBlock("typst", "#part-text["))
+          for j = i + 1, last do
+            out:insert(blocks[j])
+          end
+          out:insert(pandoc.RawBlock("typst", "]"))
+          i = last
+        else
+          out:insert(b)
+        end
+      else
+        out:insert(b)
+      end
+    else
+      out:insert(b)
     end
-    out:insert(b)
+    i = i + 1
   end
   return out
 end

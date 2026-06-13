@@ -1,0 +1,7 @@
+title: "Front Matter Test"
+author: "Tests"
+language: en
+trim: 6x9
+# Verso running head = book title, recto = current chapter title; suppressed
+# in front matter and on part/chapter opener pages.
+running-heads: true

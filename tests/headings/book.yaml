@@ -11,4 +11,5 @@ margins:
 
 font: "Libertinus Serif"
 font-size: 11pt
-toc: false
+# toc on so the contents page's wrapping of long entries is exercised too.
+toc: true

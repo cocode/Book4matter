@@ -1,0 +1,165 @@
+@charset "utf-8";
+
+/* Body text: reader's default serif. Kindle (and most readers) will substitute
+   their own face — that's fine, the user gets to choose. We only assert the
+   *category* (serif), not a specific family. */
+body {
+  font-family: serif;
+  line-height: 1.5;
+  margin: 0 1em;
+  text-align: justify;
+  -webkit-hyphens: auto;
+  hyphens: auto;
+  orphans: 2;
+  widows: 2;
+}
+
+p {
+  margin: 0;
+  text-indent: 1.5em;
+}
+
+/* First paragraph after a heading is not indented (standard book typography). */
+h1 + p, h2 + p, h3 + p, h4 + p, h5 + p, h6 + p,
+hr + p,
+figure + p {
+  text-indent: 0;
+}
+
+/* Headings: sans-serif, all caps. Reader picks the actual sans face. */
+h1, h2, h3, h4, h5, h6 {
+  font-family: sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  line-height: 1.2;
+  font-weight: bold;
+  text-align: left;
+  page-break-after: avoid;
+  break-after: avoid;
+  -webkit-hyphens: none;
+  hyphens: none;
+}
+
+h1 {
+  font-size: 1.6em;
+  margin: 2em 0 1em;
+  text-align: center;
+  /* No `page-break-before` here. Pandoc splits each <h1> into its own xhtml
+     file, and EPUB readers already start each spine file on a fresh page; a
+     redundant forced break left an empty first page in some readers, so the
+     TOC anchor landed before the heading. */
+  /* Part dividers stand alone — the chapter (h2) that follows should start on
+     a fresh page, not share the part page. */
+  page-break-after: always;
+  break-after: page;
+}
+
+h2 { font-size: 1.3em;  margin: 1.5em 0 0.75em; }
+h3 { font-size: 1.1em;  margin: 1.25em 0 0.5em; }
+h4 { font-size: 1em;    margin: 1em 0 0.25em; letter-spacing: 0.03em; }
+h5, h6 { font-size: 1em; margin: 1em 0 0.25em; letter-spacing: 0.03em; }
+
+/* Opt-in page break (corresponds to {.new-page} on a heading in markdown). */
+.new-page { page-break-before: always; break-before: page; }
+
+/* Part label — epub-parts.lua injects a `Part N` span at the start of each
+   numbered <h1>, mirroring the print template. display:block stacks it above
+   the part title; smaller, regular weight, non-uppercase keeps it visually
+   subordinate to the title itself. Same pattern as h2 .chapter-label below. */
+h1 .part-label {
+  display: block;
+  font-size: 0.6em;
+  font-weight: normal;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5em;
+}
+
+blockquote {
+  margin: 1em 1.5em;
+  font-style: italic;
+}
+
+ul, ol { margin: 0.5em 0 0.5em 1.5em; }
+li { margin: 0.25em 0; }
+
+code, pre, kbd, samp {
+  font-family: monospace;
+  font-size: 0.95em;
+}
+pre {
+  white-space: pre-wrap;
+  margin: 1em 0;
+}
+
+figure {
+  margin: 1em 0;
+  text-align: center;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+figure img { max-width: 100%; height: auto; }
+figcaption { font-size: 0.9em; font-style: italic; margin-top: 0.25em; }
+
+/* Wrap-around images. KF8 / modern Kindles honor `float` on figures; older
+   readers ignore it and render the figure as a regular block, which is the
+   correct graceful degradation. */
+figure.wrap-right {
+  float: right;
+  margin: 0 0 0.5em 1em;
+  max-width: 50%;
+}
+figure.wrap-left {
+  float: left;
+  margin: 0 1em 0.5em 0;
+  max-width: 50%;
+}
+
+/* Scene break — a centered ornament instead of a bare horizontal rule. */
+hr {
+  border: none;
+  text-align: center;
+  margin: 1.5em 0;
+  page-break-after: avoid;
+}
+hr::after {
+  content: "* * *";
+  font-family: serif;
+  font-size: 1.1em;
+  letter-spacing: 0.5em;
+}
+
+/* Pandoc puts an <hr/> at the top of its end-of-document footnotes section as
+   a separator. It should render as a plain thin rule, not the scene-break
+   ornament — otherwise every chapter that uses footnotes ends with "* * *". */
+.footnotes hr {
+  border-top: 1px solid #888;
+  width: 30%;
+  margin: 1em auto;
+}
+.footnotes hr::after {
+  content: none;
+}
+
+/* Footnote references — pandoc emits <a class="footnote-ref">1</a> with no
+   <sup> wrapper, so without this rule the number sits at body baseline right
+   next to the preceding word ("Practice hold1"). Render it as a superscript
+   numeral; line-height:0 prevents the raised number from inflating the line
+   it sits on. */
+a.footnote-ref {
+  vertical-align: super;
+  font-size: 0.75em;
+  line-height: 0;
+  text-decoration: none;
+}
+
+/* Chapter label — epub-parts.lua injects a `Chapter N` span at the start of
+   each numbered <h2>, mirroring the print template. display:block stacks it
+   above the chapter title; the smaller, regular-weight, non-uppercase style
+   keeps it visually subordinate. */
+h2 .chapter-label {
+  display: block;
+  font-size: 0.6em;
+  font-weight: normal;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5em;
+}

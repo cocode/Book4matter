@@ -32,6 +32,22 @@
 #let part-num = state("part-num", 0)
 #let unnumbered-next = state("unnumbered-next", false)
 
+// Divider-page text. parts.lua wraps any blocks sitting between a part
+// heading and the next heading — i.e. text written under the part title in
+// the part's own chapter file — in a call to this function, and flips
+// `part-text-next` just before the heading so the part show rule leaves the
+// bottom of the divider page to us: the 2fr spacer and trailing pagebreak
+// come after the text, keeping the title block at one-third height with the
+// text beneath it on the same page. (Raw `#pagebreak()` typst inside divider
+// text won't compile — pagebreaks can't live inside a content block.)
+#let part-text-next = state("part-text-next", false)
+#let part-text(body) = {
+  v(2.5em)
+  pad(x: 2em, body)
+  v(2fr)
+  pagebreak(weak: true)
+}
+
 // Spelled-out part ordinals for the contents page ("PART TWO · BASICS").
 // Books with more than twenty parts fall back to the bare numeral.
 #let part-words = ("One", "Two", "Three", "Four", "Five", "Six", "Seven",
@@ -62,6 +78,42 @@
     // before the first part) display theirs. parts.lua injects the switch to
     // arabic numbering at the start of the main matter.
     numbering: "i",
+    // The folio is rendered by this explicit footer rather than typst's
+    // default numbering footer, so display pages can go blind: a page that
+    // opens a part (its level-1 heading sits on it) shows no folio, per
+    // book convention. `page.numbering` still drives the format ("i" / "1"),
+    // keeps blind front-matter pages blind, and feeds the contents entries.
+    footer: context {
+      let pg = here().page()
+      let display-page = query(heading.where(level: 1))
+        .any(h => h.location().page() == pg)
+      if page.numbering != none and not display-page {
+        align(center, counter(page).display())
+      }
+    },
+    // Running heads (opt-in via `running-heads: true` in book.yaml):
+    // verso = book title, recto = current chapter title, small caps,
+    // centred. Shown only in the main matter (arabic folios), and never on
+    // a page where a part or chapter opens, nor between a part divider and
+    // its first chapter (overflowing divider text). Verso/recto comes from
+    // physical page parity — the same rule that drives the inside/outside
+    // margins — so the book title sits on left-hand pages.
+    header: if meta.running-heads {
+      context {
+        let pg = here().page()
+        if page.numbering == "1" {
+          let parts-or-chapters = heading.where(level: 1)
+            .or(heading.where(level: 2))
+          let opener = query(parts-or-chapters)
+            .any(h => h.location().page() == pg)
+          let prior = query(parts-or-chapters.before(here()))
+          if not opener and prior.len() > 0 and prior.last().level == 2 {
+            let head = if calc.even(pg) { meta.title } else { prior.last().body }
+            align(center, text(size: 0.85em, smallcaps(head)))
+          }
+        }
+      }
+    },
   )
 
   // --- Body text & paragraphs ---
@@ -87,13 +139,16 @@
   // Level 3 = section       (bold, spaced from preceding text).
   // Level 4 = subsection    (bold sans, body size).
   // Level 5+ = regular-weight sans (still distinguished from body serif).
-  show heading: set text(font: meta.heading-font)
+  // Headings (every level, including the PART/CHAPTER labels the show rules
+  // below emit) never hyphenate and never justify: a long title wraps whole
+  // words onto the next line ("QUESTIONS", not "QUES-/TIONS") and stays
+  // ragged-right instead of stretching to the margin. Body text still
+  // hyphenates and justifies.
+  show heading: set text(font: meta.heading-font, hyphenate: false)
+  show heading: set par(justify: false)
   show heading.where(level: 1): it => {
     pagebreak(weak: true)
     set align(center)
-    // Disable hyphenation here so a long title wraps on a space rather than
-    // breaking a word ("Varia-/tions"). Body text still hyphenates.
-    set text(hyphenate: false)
     v(1fr)
     context {
       if unnumbered-next.get() {
@@ -109,9 +164,17 @@
     }
     block(text(size: 2em, weight: "bold", upper(it.body)))
     // 1fr above, 2fr below: the part block sits one-third down the page
-    // rather than dead centre.
-    v(2fr)
-    pagebreak(weak: true)
+    // rather than dead centre. When divider text follows (flag set by
+    // parts.lua), #part-text supplies the bottom spacer and pagebreak
+    // instead, so the text shares the divider page with the title.
+    context {
+      if part-text-next.get() {
+        part-text-next.update(false)
+      } else {
+        v(2fr)
+        pagebreak(weak: true)
+      }
+    }
   }
   show heading.where(level: 2): it => {
     pagebreak(weak: true)
@@ -162,37 +225,62 @@
   // subtitle reads as a smaller sibling of the title rather than slipping
   // back into the body serif (which made the italic look mismatched).
   //
-  // The title shrinks itself to fit on a single line. We measure the title at
-  // the maximum size, and if it overruns the live area we step the size down
-  // until it fits or hits a minimum (below which a wrap is preferable to
-  // postage-stamp text). The shrink is bounded so short titles stay big and
-  // long titles stay readable.
+  // The title auto-sizes to a fraction of the live width (not the whole of
+  // it — filling margin to margin reads "word processor"). A multi-line title
+  // (book.yaml `title:` with embedded "\n") is sized from its widest line and
+  // stacked with tight leading; see the sizer note below.
   page(numbering: none)[
     #set align(center)
-    #set text(font: meta.heading-font)
-    #v(22%)
+    #set text(font: meta.heading-font, hyphenate: false)
+    #set par(justify: false)
+    // Vertical rhythm in fraction units so the gaps share the free space
+    // proportionally: title + rule + subtitle form a tight group in the upper
+    // third, and the author sits alone low on the page. Using fr (not fixed
+    // percentages) for the gaps means the big gap above the author can never
+    // collapse -- mixing fixed percentages with a lone `1fr` let a tall
+    // multi-line title starve that gap and overprint the author.
+    #v(1.1fr)
     #context {
-      // Pick the title size analytically: measure the title at the body font
-      // size, then scale linearly so the rendered width equals the live-area
-      // width. One measurement; no search loop. Clamp to a min so very long
-      // titles stay readable (and wrap rather than going postage-stamp), and
-      // to a max so one-word titles don't blow out the page.
+      // Pick the title size analytically: measure each line at the body font
+      // size, then scale so the WIDEST line fills a fraction of the live
+      // width. One measurement per line; no search loop.
+      //
+      // A single-line title fills ~78%; a stacked title fills ~62%. Stacked
+      // lines are each short (often one word), so a higher fill would blow
+      // them straight up to the clamp and let the giant lines eat the page.
+      // Clamp to a min (long titles stay readable and wrap rather than going
+      // postage-stamp) and a max (one-word titles don't blow out the page).
       let body = meta.font-size
       let avail = meta.trim.width - meta.margins.inside - meta.margins.outside
-      let ref-width = measure(text(size: body, weight: "bold", meta.title)).width
-      let ideal = body * (avail / ref-width)
-      let min-size = 1.4 * body
-      let max-size = 8 * body
-      let size = calc.max(min-size, calc.min(max-size, ideal))
-      text(size: size, weight: "bold")[#meta.title]
+      let lines = meta.title.split("\n")
+      let widest = calc.max(..lines.map(l =>
+        measure(text(size: body, weight: "bold", l)).width.pt()))
+      let fill = if lines.len() > 1 { 0.62 } else { 0.78 }
+      let ideal = body * ((fill * avail).pt() / widest)
+      let size = calc.max(1.4 * body, calc.min(6 * body, ideal))
+      // Tighten the leading so a stacked title reads as one block rather than
+      // three widely-spaced lines (no effect on a single-line title). The
+      // block's `below` overrides Typst's default paragraph spacing, which is
+      // ~1.2em of the *title* size (~1in at display sizes) and would otherwise
+      // float the rule far beneath the title.
+      set par(leading: 0.32em)
+      block(below: 0.3em, text(size: size, weight: "bold", lines.join(linebreak())))
     }
     #if meta.subtitle != none {
-      v(0.6em)
+      // Optional full-width rule between the title and subtitle
+      // (book.yaml `title-rule: true`); otherwise just a little air.
+      if meta.title-rule {
+        v(1.5em)
+        line(length: 100%, stroke: 0.5pt)
+        v(1.1em)
+      } else {
+        v(0.6em)
+      }
       text(size: 1.3em, weight: "regular")[#meta.subtitle]
     }
-    #v(1fr)
-    #text(size: 1.2em)[#meta.authors.join(", ")]
-    #v(12%)
+    #v(3fr)
+    #text(size: 1.4em)[#meta.authors.join(", ")]
+    #v(0.7fr)
   ]
 
   // Copyright page
@@ -216,6 +304,8 @@
   if meta.also-by.len() > 0 {
     page(numbering: none)[
       #set align(center)
+      #set text(hyphenate: false)
+      #set par(justify: false)
       #v(15%)
       #text(font: meta.heading-font, size: 1.7em, weight: "bold")[
         #upper("Also by " + meta.authors.join(", "))
@@ -287,6 +377,7 @@
   if meta.toc {
     page[
       #set par(justify: false)
+      #set text(hyphenate: false)
       #v(2em)
       #text(font: meta.heading-font, size: 2em)[Contents]
       #v(0.5em)

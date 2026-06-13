@@ -1,0 +1,9 @@
+# Title-page fixture: a stacked (multi-line) title, a subtitle, and the
+# optional title/subtitle rule. Exercises FEATURES.md item #4 — the multi-line
+# sizer, the `title-rule` toggle, and the title-page vertical rhythm.
+title: "The\nRotary\nWaltz"
+subtitle: "A Field Guide to the Turning Dance"
+author: "Jane Cartwright"
+language: en
+trim: 6x9
+title-rule: true
