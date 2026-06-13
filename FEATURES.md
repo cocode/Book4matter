@@ -92,7 +92,7 @@ margin-to-margin and reads "word processor".
   (or a max relative to trim).
 - [ ] Reconsider vertical rhythm: title block near optical center (~38–40%
   down), author given more presence than 1.2em.
-- [ ] Optional `ornament:` hook in book.yaml (small image/char under the
+- [x] NOT TO BE DONE: `ornament:` hook in book.yaml (small image/char under the
   title; reusable on part dividers) — cheap way to give a book a signature.
   (The user's cover mockup uses one; would unify cover and title page.)
 
@@ -108,7 +108,7 @@ header (rotary folio 44). Add a book-style table show rule: rule above table,
 rule under header row, rule below table, no vertical rules, header bold or
 small caps.
 
-## 6. Running heads (option)
+## 6. Running heads (option) — DONE 2026-06-13
 
 `running-heads: true` in book.yaml → verso = book title, recto = current
 chapter title, small caps or italic, suppressed on part/chapter opener pages
@@ -116,12 +116,23 @@ and front matter. Folio could move into the running head line or stay
 bottom-center. For reference books people flip through, this is the single
 biggest navigation aid; rotary currently has no running heads at all.
 
-## 7. Suppress folios on display pages
+Done: `running-heads: true` → centred small-caps line, book title on verso /
+chapter title on recto, body face. Suppressed in front matter (roman folios)
+and on any part/chapter opener page; also blank between a divider and its
+first chapter. Folio stays bottom-centre (independent of the head). Print
+only — EPUB ignores the flag. Header in book.typ's `set page`.
+
+## 7. Suppress folios on display pages — DONE 2026-06-13
 
 Part-divider pages currently print folios (rotary folios 1, 52, 71).
 Convention: display pages show no folio. Likely needs the L1 show rule to
 emit its own `page(numbering: none)` environment, or a state flag consumed by
 a custom footer.
+
+Done via a custom footer (book.typ `set page`): a page whose level-1 (part)
+heading sits on it shows no folio; title and copyright pages stay blind via
+their existing `numbering: none`. Counter still advances, so the arithmetic
+is unchanged. Chapter openers keep their folio.
 
 ## 8. Part-divider conventions
 
@@ -173,6 +184,11 @@ The also-by page is generated in front matter (book.typ:193–217). Marketing
 convention for self-pub is increasingly back matter (after the
 afterword/contact page, where a finished, satisfied reader sees it). Make
 placement a book.yaml choice: `also-by-placement: front | back`.
+
+## 14. HTML Output
+
+I'm going to add sections of the book to my web page, so I'll need to be able to generate HTML
+versions of sections of my book. 
 
 ---
 

@@ -31,7 +31,7 @@ MAIN_TYP = '''#import "book.typ": book
 # book.typ is copied into out/ alongside _body.typ, so the relative import
 # resolves.
 BODY_PRELUDE = '''#import "@preview/wrap-it:0.1.1": wrap-content
-#import "book.typ": part-num, unnumbered-next
+#import "book.typ": part-num, unnumbered-next, part-text, part-text-next
 '''
 
 
@@ -46,8 +46,14 @@ def run(cmd, **kw):
 
 
 def typst_str(s):
-    """Quote/escape a Python value as a Typst string literal."""
-    return '"' + str(s).replace("\\", "\\\\").replace('"', '\\"') + '"'
+    """Quote/escape a Python value as a Typst string literal.
+
+    Newlines/tabs are escaped (not passed through literally) so a multi-line
+    value -- e.g. a stacked `title: "The\\nRotary\\nWaltz"` the title page
+    splits on "\\n" -- yields a single, valid Typst string literal."""
+    s = (str(s).replace("\\", "\\\\").replace('"', '\\"')
+         .replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t"))
+    return '"' + s + '"'
 
 
 # --------------------------------------------------------------------- config
@@ -162,6 +168,7 @@ def render_meta(cfg, pages, build_id=None):
         "#let meta = (\n"
         f"  title: {typst_str(cfg.get('title', 'Untitled'))},\n"
         f"  subtitle: {opt('subtitle')},\n"
+        f"  title-rule: {str(bool(cfg.get('title-rule', False))).lower()},\n"
         f"  authors: {typst_array(authors_list(cfg))},\n"
         f"  publisher: {opt('publisher')},\n"
         f"  rights: {opt('rights')},\n"
@@ -175,6 +182,7 @@ def render_meta(cfg, pages, build_id=None):
         f"  heading-font: {typst_str(cfg.get('heading-font', 'Liberation Sans'))},\n"
         f"  font-size: {font_size},\n"
         f"  toc: {str(bool(cfg.get('toc', True))).lower()},\n"
+        f"  running-heads: {str(bool(cfg.get('running-heads', False))).lower()},\n"
         f"  also-by: {render_also_by(cfg)},\n"
         f"  build-id: {build_id_typ},\n"
         ")\n"
@@ -263,7 +271,9 @@ def _epub_metadata(cfg, build_id=None):
     doesn't emit empty <dc:*> elements that epubcheck would warn about.
     """
     meta = {}
-    if cfg.get("title"):     meta["title"] = cfg["title"]
+    # Flatten any title-page line breaks ("\n") -- they belong only on the
+    # print title page, not in EPUB <dc:title> metadata.
+    if cfg.get("title"):     meta["title"] = str(cfg["title"]).replace("\n", " ")
     if cfg.get("subtitle"):  meta["subtitle"] = cfg["subtitle"]
     authors = authors_list(cfg)
     if authors:              meta["author"] = authors

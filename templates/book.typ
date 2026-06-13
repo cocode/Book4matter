@@ -58,8 +58,14 @@
 } else { str(n) }
 
 #let book(meta, body) = {
+  // The title may carry author-chosen line breaks ("\n") for the title-page
+  // stack. Every other use -- PDF metadata, running heads -- wants it on one
+  // line, so flatten the breaks to spaces for those; only the title page
+  // splits on "\n".
+  let flat-title = meta.title.replace("\n", " ")
+
   // --- PDF document metadata ---
-  set document(title: meta.title, author: meta.authors)
+  set document(title: flat-title, author: meta.authors)
 
   // --- Page geometry (KDP print-critical) ---
   set page(
@@ -108,7 +114,7 @@
             .any(h => h.location().page() == pg)
           let prior = query(parts-or-chapters.before(here()))
           if not opener and prior.len() > 0 and prior.last().level == 2 {
-            let head = if calc.even(pg) { meta.title } else { prior.last().body }
+            let head = if calc.even(pg) { flat-title } else { prior.last().body }
             align(center, text(size: 0.85em, smallcaps(head)))
           }
         }
@@ -270,7 +276,11 @@
       // Optional full-width rule between the title and subtitle
       // (book.yaml `title-rule: true`); otherwise just a little air.
       if meta.title-rule {
-        v(1.5em)
+        // Seat the rule midway in the title->subtitle gap, not as an underline.
+        // The subtitle paragraph carries its own leading space above it (which
+        // adds to the gap below the rule), so the explicit gap ABOVE the rule
+        // is the larger value to make the two read as equal.
+        v(3em)
         line(length: 100%, stroke: 0.5pt)
         v(1.1em)
       } else {

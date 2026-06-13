@@ -94,6 +94,8 @@ heading-font: "Liberation Sans" # title page, part/chapter labels, headings
 font-size: 11pt
 line-height: 1.4
 toc: true
+running-heads: false           # true -> book title (verso) / chapter (recto)
+                               # small-caps heads on body pages; print only
 
 chapters:                      # optional explicit order
   - chapters/010-introduction.md
