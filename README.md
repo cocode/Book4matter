@@ -1,14 +1,12 @@
 # KindlePandocCreator
 
-./rotary was moved to ~/Documents/Writing/Dance/Why/rotary
-
 Markdown -> print-ready **6x9 KDP paperback interior PDF**, via Pandoc -> Typst,
 entirely inside Docker. See [DESIGN.md](DESIGN.md) for the full design and
 rationale.
 
-## Requirements
+## Docker Build
 
-- Docker. Nothing else is installed on the host.
+This project is build on docker, for security/isolation. There is no reason it could not just be run locally.
 
 ## Usage
 
@@ -61,7 +59,7 @@ docker build -t kindle-pandoc-creator .
 - `book.yaml` — title, author, trim size, margins, font.
 - `chapters/*.md` — one file per chapter (or list them in a `chapters:` key).
 - `media/` — images, referenced as `../media/...` from chapter files.
-- `out/interior.pdf` — the build output.
+- `out/book-title-interior.pdf` — the build output.
 
 ## Heading conventions
 
