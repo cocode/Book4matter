@@ -4,6 +4,9 @@ Runs inside the pandoc/typst Docker image. Subcommands:
 
     kpc print  [bookdir] [--pages N] [--keep]
     kpc epub   [bookdir] [--no-check]
+    kpc html   [bookdir]                 (whole book as one HTML page)
+    kpc html toc [bookdir]               (just the contents, no links)
+    kpc html chapter NN [bookdir]        (one chapter as an HTML fragment)
     kpc import <file.docx> [bookdir] [--no-split] [--force]
 """
 import argparse
@@ -351,6 +354,114 @@ def build_epub(bookdir, check=True, build_id=None):
     print(f"✓ wrote {epub}")
 
 
+# ------------------------------------------------------------------------ html
+
+def _html_cmd(chapters, bookdir, *extra):
+    """Shared pandoc invocation for the HTML outputs: markdown -> html5 over the
+    given chapter files, with the same image resource paths the EPUB build uses
+    (chapters reference ../media/x, resolved from the chapters dir)."""
+    return ["pandoc", *[str(c) for c in chapters],
+            "-f", "markdown", "-t", "html5", "--wrap=preserve",
+            f"--resource-path={bookdir / 'chapters'}:{bookdir}",
+            *extra]
+
+
+def build_html(bookdir):
+    """Whole book as one standalone HTML page with a clickable table of
+    contents. Mirrors the EPUB pipeline (same wrap/parts filters and CSS) but
+    targets html5; --section-divs gives every heading a section id so the --toc
+    entries link to it. Resources are embedded so the file stands on its own."""
+    bookdir = bookdir.resolve()
+    cfg = load_config(bookdir / "book.yaml")
+    chapters = resolve_chapters(bookdir, cfg)
+    if not chapters:
+        die("no chapter .md files found")
+    out = bookdir / "out"
+    out.mkdir(exist_ok=True)
+
+    title = cfg.get("title")
+    slug = slugify(title) if title else bookdir.name
+    html = out / f"{slug}.html"
+
+    cmd = _html_cmd(chapters, bookdir,
+                    "--standalone", "--section-divs",
+                    "--toc", "--toc-depth=2",
+                    f"--lua-filter={TEMPLATES / 'epub-wrap.lua'}",
+                    f"--lua-filter={TEMPLATES / 'epub-parts.lua'}",
+                    f"--css={TEMPLATES / 'epub.css'}", "--embed-resources",
+                    "--metadata", f"title={title or slug}",
+                    "--metadata", f"lang={cfg.get('language', 'en')}",
+                    "-o", str(html))
+    run(cmd, cwd=str(bookdir))
+    print(f"✓ wrote {html}")
+
+
+def build_html_toc(bookdir):
+    """Just the table of contents, as a link-free HTML fragment for embedding
+    on a website (the in-book anchors point nowhere off-site, so toc-list.lua
+    drops them). Level-1 headings sit at the top level with level-2 headings
+    nested beneath -- the same depth the EPUB/print contents use."""
+    bookdir = bookdir.resolve()
+    cfg = load_config(bookdir / "book.yaml")
+    chapters = resolve_chapters(bookdir, cfg)
+    if not chapters:
+        die("no chapter .md files found")
+    out = bookdir / "out"
+    out.mkdir(exist_ok=True)
+
+    title = cfg.get("title")
+    slug = slugify(title) if title else bookdir.name
+    toc = out / f"{slug}-toc.html"
+
+    cmd = _html_cmd(chapters, bookdir,
+                    f"--lua-filter={TEMPLATES / 'toc-list.lua'}",
+                    "-o", str(toc))
+    run(cmd, cwd=str(bookdir))
+    print(f"✓ wrote {toc}")
+
+
+def _pick_chapter(chapters, which):
+    """Resolve a `html chapter NN` argument to one chapter file: match the
+    leading number in the filename (010-foo.md -> 10), else a 1-based index into
+    the chapter list, else an exact filename/stem match."""
+    s = str(which).strip()
+    if s.isdigit():
+        n = int(s)
+        for c in chapters:
+            m = re.match(r"0*(\d+)", c.name)
+            if m and int(m.group(1)) == n:
+                return c
+        if 1 <= n <= len(chapters):
+            return chapters[n - 1]
+    for c in chapters:
+        if s in (c.name, c.stem):
+            return c
+    die(f"no chapter matches {which!r}; available: "
+        + ", ".join(c.name for c in chapters))
+
+
+def build_html_chapter(bookdir, which):
+    """One chapter as an HTML fragment (no page chrome, no auto Part/Chapter
+    label -- that numbering is meaningless out of context). Handy for pulling a
+    single chapter into a web page."""
+    bookdir = bookdir.resolve()
+    cfg = load_config(bookdir / "book.yaml")
+    chapters = resolve_chapters(bookdir, cfg)
+    if not chapters:
+        die("no chapter .md files found")
+    chapter = _pick_chapter(chapters, which)
+    out = bookdir / "out"
+    out.mkdir(exist_ok=True)
+    html = out / f"{chapter.stem}.html"
+
+    cmd = _html_cmd([chapter], bookdir,
+                    "--section-divs",
+                    f"--lua-filter={TEMPLATES / 'epub-wrap.lua'}",
+                    "-o", str(html))
+    run(cmd, cwd=str(bookdir))
+    print(f"✓ wrote {html}")
+
+
 # --------------------------------------------------------------------- import
 
 _IMG_RE = re.compile(r"(!\[[^\]]*\]\()([^)\s]+)")
@@ -517,6 +628,15 @@ def main(argv=None):
     e.add_argument("--build-id", default=None,
                    help="printing identifier appended to rights metadata")
 
+    h = sub.add_parser("html",
+                       help="build HTML: whole book, just the TOC, or one chapter")
+    h.add_argument("mode", nargs="?", default=None,
+                   help="'toc' for a link-free table of contents, 'chapter' for "
+                        "a single chapter, or omit for the whole book")
+    h.add_argument("rest", nargs="*",
+                   help="for 'chapter': the chapter number; then an optional "
+                        "bookdir (default: current directory)")
+
     i = sub.add_parser("import", help="import a .docx into chapters/*.md")
     i.add_argument("docx", help="path to the .docx file")
     i.add_argument("bookdir", nargs="?", default=".", help="target book directory")
@@ -531,6 +651,16 @@ def main(argv=None):
                     build_id=args.build_id)
     elif args.cmd == "epub":
         build_epub(Path(args.bookdir), check=args.check, build_id=args.build_id)
+    elif args.cmd == "html":
+        mode, rest = args.mode, args.rest
+        if mode == "toc":
+            build_html_toc(Path(rest[0] if rest else "."))
+        elif mode == "chapter":
+            if not rest:
+                die("usage: kpc html chapter NN [bookdir]")
+            build_html_chapter(Path(rest[1] if len(rest) > 1 else "."), rest[0])
+        else:
+            build_html(Path(mode if mode is not None else "."))
     else:
         import_docx(Path(args.docx), Path(args.bookdir),
                     split=args.split, force=args.force)

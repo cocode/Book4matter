@@ -30,6 +30,19 @@ Import a Word manuscript (splits into chapters on each Heading 1):
 ./run.sh import manuscript.docx path/to/book/
 ```
 
+Export to HTML — the whole book as one page, just the table of contents (for a
+website), or a single chapter:
+
+```bash
+./run.sh html example/             # whole book, one HTML page with a clickable TOC
+./run.sh html toc example/         # the table of contents only, a link-free fragment
+./run.sh html chapter 2 example/   # one chapter, as an HTML fragment
+```
+
+`html toc` emits a `<nav class="book-toc">` of plain (unlinked) chapter titles
+— the in-book anchors point nowhere off-site — ready to style and drop into a
+web page. `html` and `html chapter` reuse the EPUB styling.
+
 The first run builds the Docker image. After changing the template or CLI, force
 a rebuild:
 
