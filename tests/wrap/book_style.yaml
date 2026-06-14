@@ -1,0 +1,9 @@
+trim: 6x9
+margins:
+  inside: 0.875
+  outside: 0.625
+  top: 0.75
+  bottom: 0.75
+font: Libertinus Serif
+font-size: 11pt
+toc: false

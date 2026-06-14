@@ -26,6 +26,7 @@ FIXTURES=(
   tests/wrap
   tests/parts
   tests/frontmatter
+  tests/typography
 )
 
 pass=0
