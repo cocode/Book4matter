@@ -38,6 +38,10 @@ function Header(h)
     local new_content = pandoc.Inlines({
       pandoc.Span({pandoc.Str("Part " .. part_count)},
                   {class = "part-label"}),
+      -- Separator so the label and title don't run together when flattened
+      -- inline (the TOC); harmless in the heading, where the label is
+      -- display:block and a leading space on the next line collapses.
+      pandoc.Space(),
     })
     new_content:extend(h.content)
     h.content = new_content
@@ -49,6 +53,7 @@ function Header(h)
     local new_content = pandoc.Inlines({
       pandoc.Span({pandoc.Str("Chapter " .. chapter_count)},
                   {class = "chapter-label"}),
+      pandoc.Space(),
     })
     new_content:extend(h.content)
     h.content = new_content

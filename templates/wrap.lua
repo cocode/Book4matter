@@ -17,6 +17,11 @@
 --
 -- The output assumes `wrap-content` is in scope (kpc prepends an import for
 -- "@preview/wrap-it" to the generated body).
+--
+-- It also handles a standalone `.center` image (`![](path){.center}`),
+-- emitting `#align(center)[...]` so a caption-less image is centred on its own
+-- line instead of sitting flush-left. (A captioned image is already centred by
+-- typst's default figure handling; this is for the no-caption case.)
 
 local function typst_str(s)
   return '"' .. s:gsub('\\', '\\\\'):gsub('"', '\\"') .. '"'
@@ -51,6 +56,26 @@ local function emit_wrap(img, body_blocks, align)
     image_args, body_typst, align, columns))
 end
 
+-- Returns the image if `block` is a standalone `.center` image, otherwise nil.
+local function center_descriptor(block)
+  if block.t ~= "Para" or #block.content ~= 1 then return nil end
+  local img = block.content[1]
+  if img.t ~= "Image" then return nil end
+  for _, c in ipairs(img.classes) do
+    if c == "center" then return img end
+  end
+  return nil
+end
+
+-- A standalone `.center` image: centre it as its own block. We reuse pandoc's
+-- own typst serialization of the image (so width/height are handled exactly as
+-- everywhere else) and wrap it in `#align(center)[...]`. typst ignores the
+-- `.center` class itself, so the marker never reaches the output.
+local function emit_center(img)
+  local img_typst = pandoc.write(pandoc.Pandoc({ pandoc.Para { img } }), "typst")
+  return pandoc.RawBlock("typst", "#align(center)[" .. img_typst .. "]")
+end
+
 function Blocks(blocks)
   local out = pandoc.List()
   local i = 1
@@ -73,7 +98,12 @@ function Blocks(blocks)
       end
       out:insert(emit_wrap(img, body, align))
     else
-      out:insert(b)
+      local cimg = center_descriptor(b)
+      if cimg then
+        out:insert(emit_center(cimg))
+      else
+        out:insert(b)
+      end
       i = i + 1
     end
   end

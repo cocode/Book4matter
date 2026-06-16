@@ -16,7 +16,7 @@ Build the bundled example:
 ./run.sh print example/          # -> example/out/interior.pdf
 ```
 
-Build your own book (a directory containing `book.yaml` and `chapters/*.md`):
+Build your own book (a directory containing `book_metadata.yaml` and `chapters/*.md`):
 
 ```bash
 ./run.sh print path/to/book/
@@ -56,7 +56,8 @@ docker build -t kindle-pandoc-creator .
 
 ## Book layout
 
-- `book.yaml` — title, author, trim size, margins, font.
+- `book_metadata.yaml` — title, author
+- `book_style.yaml` — trim size, margins, font.
 - `chapters/*.md` — one file per chapter (or list them in a `chapters:` key).
 - `media/` — images, referenced as `../media/...` from chapter files.
 - `out/book-title-interior.pdf` — the build output.
@@ -77,13 +78,24 @@ docker build -t kindle-pandoc-creator .
   without advancing the count; `{.new-page}` forces a page break before a
   heading.
 
+## Images
+
+A standalone image (alone in its paragraph) understands a couple of classes:
+
+- `{.center}` centres a caption-less image on its own line (print and EPUB). A
+  captioned image — `![Caption](path)` — is already centred as a figure.
+- `{.wrap-right}` / `{.wrap-left}` float the image so the rest of the section's
+  text wraps beside it.
+
+Size with `{width="3in"}` (and an optional `height="…"`).
+
 ## Page furniture
 
 - **Folios.** Front matter is numbered in lowercase roman (i, ii, …),
   switching to arabic at the first part. Display pages — the title and
   copyright pages, and every part-divider page — show no folio, though they
   still count. Chapter openers keep theirs.
-- **Running heads** (opt-in: `running-heads: true` in `book.yaml`). Print
+- **Running heads** (opt-in: `running-heads: true` in `book_style.yaml`). Print
   only. A centred small-caps line at the top of body pages — book title on
   left-hand (verso) pages, current chapter title on right-hand (recto)
   pages. Suppressed in front matter and on any page where a part or chapter

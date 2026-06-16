@@ -61,10 +61,22 @@ def typst_str(s):
 
 # --------------------------------------------------------------------- config
 
-def load_config(path):
-    if not path.exists():
-        die(f"no book.yaml found at {path}")
-    return yaml.safe_load(path.read_text()) or {}
+def load_config(bookdir):
+    """Merge a book's config from book_style.yaml + book_metadata.yaml.
+
+    The style/metadata split is by convention only -- both files are read and
+    merged into one dict (metadata wins on the rare key collision). At least one
+    of the two must exist."""
+    cfg = {}
+    found = False
+    for name in ("book_style.yaml", "book_metadata.yaml"):
+        f = bookdir / name
+        if f.exists():
+            cfg.update(yaml.safe_load(f.read_text()) or {})
+            found = True
+    if not found:
+        die(f"no book_style.yaml or book_metadata.yaml in {bookdir}")
+    return cfg
 
 
 def parse_trim(cfg):
@@ -217,7 +229,7 @@ def resolve_chapters(bookdir, cfg):
 
 def build_print(bookdir, pages=None, keep=False, build_id=None):
     bookdir = bookdir.resolve()
-    cfg = load_config(bookdir / "book.yaml")
+    cfg = load_config(bookdir)
     chapters = resolve_chapters(bookdir, cfg)
     if not chapters:
         die("no chapter .md files found")
@@ -298,7 +310,7 @@ def _epub_metadata(cfg, build_id=None):
 
 def build_epub(bookdir, check=True, build_id=None):
     bookdir = bookdir.resolve()
-    cfg = load_config(bookdir / "book.yaml")
+    cfg = load_config(bookdir)
     chapters = resolve_chapters(bookdir, cfg)
     if not chapters:
         die("no chapter .md files found")
@@ -372,7 +384,7 @@ def build_html(bookdir):
     targets html5; --section-divs gives every heading a section id so the --toc
     entries link to it. Resources are embedded so the file stands on its own."""
     bookdir = bookdir.resolve()
-    cfg = load_config(bookdir / "book.yaml")
+    cfg = load_config(bookdir)
     chapters = resolve_chapters(bookdir, cfg)
     if not chapters:
         die("no chapter .md files found")
@@ -402,7 +414,7 @@ def build_html_toc(bookdir):
     drops them). Level-1 headings sit at the top level with level-2 headings
     nested beneath -- the same depth the EPUB/print contents use."""
     bookdir = bookdir.resolve()
-    cfg = load_config(bookdir / "book.yaml")
+    cfg = load_config(bookdir)
     chapters = resolve_chapters(bookdir, cfg)
     if not chapters:
         die("no chapter .md files found")
@@ -445,7 +457,7 @@ def build_html_chapter(bookdir, which):
     label -- that numbering is meaningless out of context). Handy for pulling a
     single chapter into a web page."""
     bookdir = bookdir.resolve()
-    cfg = load_config(bookdir / "book.yaml")
+    cfg = load_config(bookdir)
     chapters = resolve_chapters(bookdir, cfg)
     if not chapters:
         die("no chapter .md files found")
@@ -612,7 +624,7 @@ def main(argv=None):
 
     b = sub.add_parser("print", help="build interior PDF from a book directory")
     b.add_argument("bookdir", nargs="?", default=".",
-                   help="book directory (contains book.yaml, chapters/)")
+                   help="book directory (contains book_*.yaml and chapters/)")
     b.add_argument("--pages", type=int, default=None,
                    help="estimated page count, to pick a KDP-appropriate gutter")
     b.add_argument("--keep", action="store_true",
@@ -622,7 +634,7 @@ def main(argv=None):
 
     e = sub.add_parser("epub", help="build an EPUB3 from a book directory")
     e.add_argument("bookdir", nargs="?", default=".",
-                   help="book directory (contains book.yaml, chapters/)")
+                   help="book directory (contains book_*.yaml and chapters/)")
     e.add_argument("--no-check", dest="check", action="store_false",
                    help="skip running epubcheck on the result")
     e.add_argument("--build-id", default=None,
@@ -636,6 +648,9 @@ def main(argv=None):
     h.add_argument("rest", nargs="*",
                    help="for 'chapter': the chapter number; then an optional "
                         "bookdir (default: current directory)")
+    h.add_argument("--build-id", default=None,
+                   help="accepted for wrapper parity (build.sh stamps every "
+                        "build); not stamped on web output")
 
     i = sub.add_parser("import", help="import a .docx into chapters/*.md")
     i.add_argument("docx", help="path to the .docx file")

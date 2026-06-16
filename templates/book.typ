@@ -128,11 +128,18 @@
     size: meta.font-size,
     lang: meta.language,
     hyphenate: true,
+    // Lining (uniform-height) figures throughout, not Libertinus's default
+    // old-style text figures.
+    number-type: "lining",
   )
 
-  // The (amount:, all:) indent form needs Typst >= 0.12; fall back on older.
+  // first-line-indent with `all: true` indents every paragraph's first line,
+  // including the first one after a heading — the book's house style, with no
+  // flush-left chapter/section openers. The (amount:, all:) form needs Typst
+  // >= 0.12; the pre-0.12 fallback can only set the amount, so there the first
+  // paragraph after a heading would stay un-indented.
   let indent = if sys.version >= version(0, 12, 0) {
-    (amount: 1.2em, all: false)
+    (amount: 1.2em, all: true)
   } else {
     1.2em
   }
@@ -210,19 +217,76 @@
   show heading.where(level: 3): it => {
     v(2.4em, weak: true)
     set text(size: 1.2em, weight: "bold")
-    block(below: 1em, upper(it.body))
+    block(below: 1em, sticky: true, upper(it.body))
   }
   show heading.where(level: 4): it => {
     v(2em, weak: true)
-    block(below: 1em, text(weight: "bold", size: 1em, upper(it.body)))
+    block(below: 1em, sticky: true, text(weight: "bold", size: 1em, upper(it.body)))
   }
   show heading.where(level: 5): it => {
     v(2em, weak: true)
-    block(below: 1em, text(weight: "regular", size: 1em, upper(it.body)))
+    block(below: 1em, sticky: true, text(weight: "regular", size: 1em, upper(it.body)))
   }
   show heading.where(level: 6): it => {
     v(2em, weak: true)
-    block(below: 1em, text(weight: "regular", size: 1em, upper(it.body)))
+    block(below: 1em, sticky: true, text(weight: "regular", size: 1em, upper(it.body)))
+  }
+
+  // --- Links: print-friendly. Never hyphenate a URL or email -- a soft hyphen
+  // reads as part of the address (e.g. "thero-tarywaltz@..."). For external web
+  // links append the destination in parentheses so a print reader can see where
+  // it points; a bare autolink already shows its URL, and mailto:/internal links
+  // keep their visible text. (EPUB/HTML don't use this template, so their links
+  // stay live and bare.)
+  show link: it => {
+    set text(hyphenate: false)
+    let d = it.dest
+    if type(d) == str and (d.starts-with("http://") or d.starts-with("https://")) {
+      // External web link: append the URL unless the visible text already is it
+      // (a bare autolink, where pandoc emits no body).
+      let bare = it.body == none or it.body == [] or it.body == [#d]
+      if bare { it } else { [#it.body~(#d)] }
+    } else if type(d) == str and d.starts-with("mailto:") {
+      box(it.body)  // keep the address whole -- never split at an internal hyphen
+    } else {
+      it  // internal links (TOC, footnotes) unchanged
+    }
+  }
+
+  // --- Block quotes (markdown `>`, which pandoc emits as quote(block: true)):
+  // set off from the body -- slightly smaller, italic, indented both sides with
+  // air above and below. Mark quotes semantically with `>`; never hand-indent.
+  show quote.where(block: true): it => {
+    set text(size: 0.95em, style: "italic")
+    block(
+      above: 1.1em, below: 1.1em,
+      inset: (left: 1.6em, right: 1.6em),
+      it.body,
+    )
+  }
+
+  // --- Tables: book style (booktabs). Pandoc emits a full grid plus a manual
+  // rule under the header; we drop the grid and keep three horizontal rules
+  // (above the table, under the header, below the table), no vertical rules, a
+  // bold header, and tabular (fixed-width) figures so columns of numbers align.
+  // The reconstruction appends the closing rule pandoc doesn't emit; the guard
+  // (table already ends in an hline) stops the show rule from recursing.
+  show table.cell.where(y: 0): set text(weight: "bold")
+  show table: it => {
+    set text(number-width: "tabular")
+    let kids = it.children
+    if kids.len() > 0 and kids.last().func() == table.hline {
+      it
+    } else {
+      table(
+        columns: it.columns,
+        align: it.align,
+        inset: (x: 0.7em, y: 0.5em),
+        stroke: (_, y) => (top: if y == 0 { 0.9pt } else { 0pt }),
+        ..kids,
+        table.hline(stroke: 0.9pt),
+      )
+    }
   }
 
   // ============ FRONT MATTER (roman folios; display pages blind) ============

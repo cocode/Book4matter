@@ -114,6 +114,18 @@ figure.wrap-left {
   max-width: 50%;
 }
 
+/* Centered standalone image: `![](x){.center}`. The class lands on the <img>
+   (wrap images become <figure>s instead — see epub-wrap.lua), so make it a
+   block with auto side margins. max-width keeps it on-screen on narrow
+   devices. */
+img.center {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 100%;
+  height: auto;
+}
+
 /* Scene break — a centered ornament instead of a bare horizontal rule. */
 hr {
   border: none;
