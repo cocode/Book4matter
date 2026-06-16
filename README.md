@@ -1,8 +1,21 @@
-# KindlePandocCreator
+# Book4matter   (Book Formatter)
 
-Markdown -> print-ready **6x9 KDP paperback interior PDF**, via Pandoc -> Typst,
-entirely inside Docker. See [DESIGN.md](DESIGN.md) for the full design and
-rationale.
+This is a tool to take markdown (pandoc flavored) and convert it to:
+
+1. PDF for printing (specifically aimed at kdp, generated via Typst)
+2. epub
+3. html
+
+This is a personal project I use to format the books I have published. 
+It takes markdown, and uses pandoc to convert it to html, or epub. For pdf/print, pandoc outputs 
+to Typst, which does the print formatting. This setup allows you to generate epub, html and print
+from the same source. It also separates the styling from the source, so you can apply the same style
+to multiple books, or change the style of multiple books by making a change in one place.
+
+This is a command line tool, so it's probably best for people that are comfortable with that.
+
+
+See [DESIGN.md](DESIGN.md) for the full design and rationale.
 
 ## Docker Build
 

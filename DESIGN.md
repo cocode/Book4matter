@@ -1,26 +1,27 @@
 # KindlePandocCreator — Design
 
 A pipeline that turns Markdown into a print-ready PDF for **Amazon Kindle Direct
-Publishing (KDP)** paperback interiors. Markdown is the single source of truth;
+Publishing (KDP)** paperback interiors, epub or html. Markdown is the single source of truth;
 everything runs inside Docker (no host installs).
 
 ## Goals & scope
 
-- **Input:** one or more Markdown files (`chapters/*.md`) plus a `book.yaml`
-  metadata file.
-- **Output (v1):** a 6×9-inch, black-and-white **paperback interior PDF**
+- **Input:** one or more Markdown files (`chapters/*.md`) plus a `book_metadata.yaml`
+  file and a book_style.md file.
+- PDF **Output (v1):** a 6×9-inch, black-and-white **paperback interior PDF**
   (`out/interior.pdf`).
-- **Later:** EPUB, as a parallel Pandoc target — which is *why* the pipeline
+- EPUB, as a parallel Pandoc target — which is *why* the pipeline
   routes Markdown → Pandoc → Typst rather than authoring directly in Typst
   (Typst alone cannot produce EPUB; Pandoc can feed both).
+- HTML  - This is a recent addition, and not heavily tested. 
 - **Out of scope:** the cover. The author supplies their own cover to KDP
   separately. This pipeline produces the interior only.
 
 ## Why Pandoc → Typst → PDF
 
 ```
-                       ┌──────────────┐
-   chapters/*.md ─┐    │  book.yaml   │ (title, author, trim, margins, font…)
+                       ┌───────────────────────┐
+   chapters/*.md ─┐    │  book_metadata.yaml   │ (title, author, trim, margins, font…)
                   │    └──────┬───────┘
                   ▼           │
               pandoc ─t typst │ generates a Typst *body fragment*
@@ -49,11 +50,6 @@ print-critical geometry**:
 The *styling* (title page, table of contents, chapter headings) is adapted from
 the **ilm** Typst template (MIT-0 licensed, so freely reusable).
 
-**Why not use ilm directly?** Its `paper-size` accepts only *named* paper sizes
-(no custom 6×9) and its margins are symmetric (no binding gutter) — both of
-which KDP validates on upload. The `typst-orange-template` was also rejected: it
-is a technical-report aesthetic with the same geometry gap.
-
 ## Fonts
 
 Default body font is **Libertinus Serif**, which is bundled inside the Typst
@@ -70,7 +66,7 @@ Docker image rather than fetched at runtime.
   otherwise `chapters/*.md` sorted by filename.
 - Each level-1 heading (`# …`) becomes a chapter.
 
-### `book.yaml` (illustrative)
+### `book_metadata.yaml` (illustrative)
 
 ```yaml
 title: "The Example Book"
@@ -81,6 +77,16 @@ publisher: "Self-Published"
 rights: "© 2026 Jane Author. All rights reserved."
 isbn: ""
 language: en
+
+chapters:                      # optional explicit order
+  - chapters/010-introduction.md
+  - chapters/020-on-typography.md
+```
+
+
+### `book_style.yaml` (illustrative)
+
+```yaml
 
 trim: 6x9                      # or a {width, height} mapping
 margins:                       # inches; omit to use page-count-based defaults
@@ -97,9 +103,6 @@ toc: true
 running-heads: false           # true -> book title (verso) / chapter (recto)
                                # small-caps heads on body pages; print only
 
-chapters:                      # optional explicit order
-  - chapters/010-introduction.md
-  - chapters/020-on-typography.md
 ```
 
 ### Custom fonts (print)
