@@ -14,6 +14,9 @@ to multiple books, or change the style of multiple books by making a change in o
 
 This is a command line tool, so it's probably best for people that are comfortable with that.
 
+Note that this project was formerly "Kindle Pandoc Creator", so you may see references to that name,
+or to "kpc" surviving in the code and documentation.
+
 
 See [DESIGN.md](DESIGN.md) for the full design and rationale.
 
