@@ -575,8 +575,13 @@ def import_docx(docx, bookdir, split=True, force=False):
             "pass --force to overwrite")
 
     (bookdir / "out").mkdir(exist_ok=True)
+    # `-t markdown-smart` (note the minus): the markdown writer enables the
+    # `smart` extension by default, which backslash-escapes literal straight
+    # quotes/apostrophes (Don\'t, \"quote\") and rewrites em dashes/ellipses as
+    # ASCII (---, ...). Disabling it emits the author's punctuation verbatim as
+    # Unicode, which is cleaner to hand-edit and round-trips through the build.
     run(["pandoc", str(docx.resolve()),
-         "-f", "docx", "-t", "markdown",
+         "-f", "docx", "-t", "markdown-smart",
          "--wrap=none", "--markdown-headings=atx",
          "--track-changes=accept", "--extract-media=media",
          "-o", os.path.join("out", "_import.md")],
