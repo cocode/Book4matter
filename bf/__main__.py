@@ -1,13 +1,13 @@
-"""kpc - turn Markdown into a KDP print-ready PDF or a KDP-ready EPUB.
+"""bf - turn Markdown into a KDP print-ready PDF or a KDP-ready EPUB.
 
 Runs inside the pandoc/typst Docker image. Subcommands:
 
-    kpc print  [bookdir] [--pages N] [--keep]
-    kpc epub   [bookdir] [--no-check]
-    kpc html   [bookdir]                 (whole book as one HTML page)
-    kpc html toc [bookdir]               (just the contents, no links)
-    kpc html chapter NN [bookdir]        (one chapter as an HTML fragment)
-    kpc import <file.docx> [bookdir] [--no-split] [--force]
+    bf print  [bookdir] [--pages N] [--keep]
+    bf epub   [bookdir] [--no-check]
+    bf html   [bookdir]                 (whole book as one HTML page)
+    bf html toc [bookdir]               (just the contents, no links)
+    bf html chapter NN [bookdir]        (one chapter as an HTML fragment)
+    bf import <file.docx> [bookdir] [--no-split] [--force]
 """
 import argparse
 import os
@@ -19,7 +19,7 @@ from pathlib import Path
 
 import yaml
 
-TEMPLATES = Path(os.environ.get("KPC_TEMPLATES", "/opt/templates"))
+TEMPLATES = Path(os.environ.get("BF_TEMPLATES", "/opt/templates"))
 
 MAIN_TYP = '''#import "book.typ": book
 #import "_meta.typ": meta
@@ -39,7 +39,7 @@ BODY_PRELUDE = '''#import "@preview/wrap-it:0.1.1": wrap-content
 
 
 def die(msg):
-    print(f"kpc: error: {msg}", file=sys.stderr)
+    print(f"bf: error: {msg}", file=sys.stderr)
     raise SystemExit(1)
 
 
@@ -623,7 +623,7 @@ def import_docx(docx, bookdir, split=True, force=False):
 # ------------------------------------------------------------------------ cli
 
 def main(argv=None):
-    p = argparse.ArgumentParser(prog="kpc",
+    p = argparse.ArgumentParser(prog="bf",
                                 description="Markdown -> KDP print-ready PDF")
     sub = p.add_subparsers(dest="cmd", required=True)
 
@@ -677,7 +677,7 @@ def main(argv=None):
             build_html_toc(Path(rest[0] if rest else "."))
         elif mode == "chapter":
             if not rest:
-                die("usage: kpc html chapter NN [bookdir]")
+                die("usage: bf html chapter NN [bookdir]")
             build_html_chapter(Path(rest[1] if len(rest) > 1 else "."), rest[0])
         else:
             build_html(Path(mode if mode is not None else "."))

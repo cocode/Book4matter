@@ -7,7 +7,7 @@
 // page, table of contents, and chapter-heading styling are adapted from the ilm
 // template (https://github.com/talal/ilm, MIT-0).
 //
-// Entry point: `#show: book.with(meta)`, where `meta` is the dictionary the kpc
+// Entry point: `#show: book.with(meta)`, where `meta` is the dictionary the bf
 // CLI generates from book.yaml.
 
 #import "@preview/wrap-it:0.1.1": wrap-content

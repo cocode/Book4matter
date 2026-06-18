@@ -4,7 +4,7 @@
 # For the example book and every fixture under tests/, builds an EPUB (piped
 # through epubcheck) and the HTML outputs (asserting the website TOC fragment
 # is link-free and the whole-book page's TOC links all resolve to a section).
-# Everything runs inside the kindle-pandoc-creator Docker image — the host
+# Everything runs inside the book4matter Docker image — the host
 # never installs pandoc, java, or epubcheck.
 #
 # Usage:  ./tests/run.sh           (run from project root)

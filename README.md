@@ -67,7 +67,7 @@ a rebuild:
 To rebuild the image without running a build:
 
 ```bash
-docker build -t kindle-pandoc-creator .
+docker build -t book4matter .
 ```
 
 ## Book layout

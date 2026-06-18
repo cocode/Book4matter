@@ -1,4 +1,4 @@
-# KindlePandocCreator — Design
+# Book4matter — Design
 
 A pipeline that turns Markdown into a print-ready PDF for **Amazon Kindle Direct
 Publishing (KDP)** paperback interiors, epub or html. Markdown is the single source of truth;
@@ -108,7 +108,7 @@ running-heads: false           # true -> book title (verso) / chapter (recto)
 ### Custom fonts (print)
 
 Drop `.ttf` / `.otf` files into `<bookdir>/fonts/` and reference them by family
-name from `font:` / `heading-font:` in `book.yaml`. `kpc print` automatically
+name from `font:` / `heading-font:` in `book.yaml`. `bf print` automatically
 passes `--font-path <bookdir>/fonts` to typst when the directory exists, so the
 fonts travel with the book project (no system installs, no image rebuilds).
 System fonts are still searched, so a missing `fonts/` dir is fine. The font's
@@ -120,7 +120,7 @@ EPUB intentionally does NOT embed custom fonts; `epub.css` specifies generic
 
 ## `.docx` import
 
-Many manuscripts start life in Word. `kpc import` converts a `.docx` into the
+Many manuscripts start life in Word. `bf import` converts a `.docx` into the
 Markdown the pipeline expects:
 
 ```
@@ -171,12 +171,12 @@ gutter.
 
 ## Tooling & invocation
 
-- **Docker image:** `FROM pandoc/typst` + `python3` + `py3-yaml`. The `kpc` CLI
-  and `templates/` are copied in. `ENTRYPOINT` is `python3 -m kpc`.
-- **CLI (`kpc`):** a thin Python orchestrator.
-  - `kpc print [bookdir] [--pages N] [--keep]`
-  - `kpc epub  [bookdir] [--no-check]`
-  - `kpc import <file.docx> [bookdir] [--no-split] [--force]`
+- **Docker image:** `FROM pandoc/typst` + `python3` + `py3-yaml`. The `bf` CLI
+  and `templates/` are copied in. `ENTRYPOINT` is `python3 -m bf`.
+- **CLI (`bf`):** a thin Python orchestrator.
+  - `bf print [bookdir] [--pages N] [--keep]`
+  - `bf epub  [bookdir] [--no-check]`
+  - `bf import <file.docx> [bookdir] [--no-split] [--force]`
 - **Host wrapper (`run.sh`):** builds the image if missing, then runs the
   container with the current directory mounted at `/work`.
 

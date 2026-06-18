@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Host wrapper: build the Docker image if needed, then run kpc inside it with the
+# Host wrapper: build the Docker image if needed, then run bf inside it with the
 # current directory mounted at /work. Nothing is installed on the host.
 set -euo pipefail
 
-IMAGE="kindle-pandoc-creator"
+IMAGE="book4matter"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 rebuild=0
@@ -20,7 +20,7 @@ mounts=(-v "$PWD:/work")
 # An input file passed as an argument may live outside the current directory
 # (e.g. a .docx in ~/Documents). The container can only see mounted paths, so
 # bind-mount the parent directory of any such file read-only at its real path,
-# letting kpc read it. Files already under $PWD are covered by the /work mount.
+# letting bf read it. Files already under $PWD are covered by the /work mount.
 seen=":"
 for arg in "$@"; do
   if [[ -f "$arg" ]]; then

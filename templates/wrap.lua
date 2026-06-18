@@ -15,7 +15,7 @@
 -- splitting the body at the bottom of the image and continuing the rest at
 -- full page width.
 --
--- The output assumes `wrap-content` is in scope (kpc prepends an import for
+-- The output assumes `wrap-content` is in scope (bf prepends an import for
 -- "@preview/wrap-it" to the generated body).
 --
 -- It also handles a standalone `.center` image (`![](path){.center}`),

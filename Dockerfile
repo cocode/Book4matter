@@ -2,7 +2,7 @@
 # installed on the host.
 FROM pandoc/typst:latest
 
-# Python + PyYAML for the kpc CLI; Liberation Sans (Helvetica-metric) for
+# Python + PyYAML for the bf CLI; Liberation Sans (Helvetica-metric) for
 # headings; openjdk + unzip for the epubcheck validator. (pandoc and typst
 # already ship in the base.)
 RUN apk add --no-cache python3 py3-yaml font-liberation openjdk17-jre-headless unzip
@@ -30,12 +30,12 @@ RUN cd /opt && \
     printf '#!/bin/sh\nexec java -jar /opt/epubcheck.jar "$@"\n' > /usr/local/bin/epubcheck && \
     chmod +x /usr/local/bin/epubcheck
 
-COPY kpc /opt/kpc
+COPY bf /opt/bf
 COPY templates /opt/templates
 
 ENV PYTHONPATH=/opt \
-    KPC_TEMPLATES=/opt/templates \
+    BF_TEMPLATES=/opt/templates \
     PYTHONDONTWRITEBYTECODE=1
 
 WORKDIR /work
-ENTRYPOINT ["python3", "-m", "kpc"]
+ENTRYPOINT ["python3", "-m", "bf"]

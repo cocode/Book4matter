@@ -1,6 +1,6 @@
 -- toc-list.lua - rebuild the document as a link-free, nested table of contents.
 --
--- `kpc html toc` exports a book's contents for embedding on a website, where
+-- `bf html toc` exports a book's contents for embedding on a website, where
 -- the in-book section anchors would point nowhere. Pandoc's own --toc always
 -- emits links, so rather than post-process that HTML we build the list here
 -- from the headings: level-1 headings at the top level, level-2 headings
