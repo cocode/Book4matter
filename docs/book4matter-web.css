@@ -1,0 +1,444 @@
+@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;1,8..60,400&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+/* =================================================================
+   book4matter — web stylesheet
+   Drop-in CSS for the generated HTML. Link it AFTER the generator's
+   own <style> blocks so these rules win on cascade order, e.g.:
+
+       <link rel="stylesheet" href="book4matter-web.css" />
+
+   Theme: clean docs, sticky sidebar table of contents, serif reading
+   body (Source Serif 4) with sans headings (IBM Plex Sans) and a
+   mono for code (IBM Plex Mono). Warm-neutral light palette, one
+   muted-blue accent, contrast-checked (body text ~16:1, muted ~7:1,
+   links ~7:1).
+   ================================================================= */
+
+:root {
+  --side-w: 300px;        /* sidebar width            */
+  --head-h: 86px;         /* fixed title bar height   */
+  --measure: 720px;       /* reading column max-width */
+
+  --bg:        #fbfaf8;   /* page background          */
+  --bg-side:   #f3f1ec;   /* sidebar background       */
+  --ink:       #1c1b19;   /* primary text             */
+  --ink-2:     #57534c;   /* muted text / captions    */
+  --rule:      #e4e0d8;   /* hairlines & borders      */
+  --rule-2:    #d8d3c9;   /* stronger borders         */
+  --accent:    #2f5d8a;   /* links, active nav, marks */
+  --accent-bg: #e9eef5;   /* tint behind active nav   */
+  --code-bg:   #f1ede6;   /* inline code background   */
+  --block-bg:  #f6f3ed;   /* code block background    */
+
+  --serif: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+  --sans:  'IBM Plex Sans', system-ui, 'Segoe UI', Helvetica, sans-serif;
+  --mono:  'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+}
+
+/* ---- Base / reading column ------------------------------------ */
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--serif);
+  font-size: 19px;
+  line-height: 1.72;
+  color: var(--ink);
+  background: var(--bg);
+  margin: 0;
+  padding-left: var(--side-w);
+  text-align: left;          /* override justify */
+  -webkit-hyphens: none;
+  hyphens: none;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Each top-level content block is the centered reading column. */
+body > section,
+body > .footnotes {
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding: 8px 56px 96px;
+  box-sizing: content-box;
+}
+body > section:first-of-type { padding-top: 64px; }
+
+p {
+  margin: 0 0 1.05em;
+  text-indent: 0;            /* web spacing, not print indent */
+}
+
+/* Comfortable measure for prose; keep code/figures full width. */
+p, li, blockquote { max-width: 68ch; }
+
+a {
+  color: var(--accent);
+  text-decoration-color: color-mix(in srgb, var(--accent) 35%, transparent);
+  text-underline-offset: 2px;
+}
+a:hover { text-decoration-color: var(--accent); }
+
+strong { font-weight: 600; }
+em { font-style: italic; }
+
+::selection { background: var(--accent-bg); }
+
+/* ---- Headings -------------------------------------------------- */
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--sans);
+  color: var(--ink);
+  text-transform: none;       /* drop the print uppercase */
+  letter-spacing: -0.01em;
+  line-height: 1.22;
+  text-align: left;
+  font-weight: 600;
+  text-wrap: balance;
+  -webkit-hyphens: none;
+  hyphens: none;
+  page-break-after: auto;
+  break-after: auto;
+  scroll-margin-top: 1.5rem;
+}
+
+/* h1 = a Part divider */
+h1 {
+  font-size: 2.1em;
+  font-weight: 700;
+  margin: 0 0 0.7em;
+  padding-top: 0.4em;
+  text-align: left;
+  page-break-after: auto;
+  break-after: auto;
+}
+/* h2 = a Chapter / top section */
+h2 {
+  font-size: 1.62em;
+  font-weight: 700;
+  margin: 1.9em 0 0.6em;
+  padding-top: 1.4em;
+  border-top: 1px solid var(--rule);
+}
+body > section:first-of-type > h2,        /* Introduction: no top rule */
+section.level1 > h2:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+section.level1 > h2 { margin-top: 1.2em; }
+
+h3 {
+  font-size: 1.18em;
+  font-weight: 600;
+  margin: 2em 0 0.5em;
+  letter-spacing: 0;
+}
+h4, h5, h6 {
+  font-size: 1em;
+  font-weight: 600;
+  margin: 1.6em 0 0.4em;
+  letter-spacing: 0;
+  color: var(--ink-2);
+}
+
+/* Part / Chapter eyebrows printed inside the headings */
+h1 .part-label,
+h2 .chapter-label {
+  display: block;
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.7em;
+}
+
+/* Heading directly followed by text gets no extra gap */
+h1 + p, h2 + p, h3 + p, h4 + p, h5 + p, h6 + p { margin-top: 0; }
+
+/* ---- Title bar (header) --------------------------------------- */
+
+#title-block-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: var(--side-w);
+  height: var(--head-h);
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  padding: 0 28px;
+  margin: 0;
+  background: var(--bg-side);
+  border-right: 1px solid var(--rule-2);
+  border-bottom: 1px solid var(--rule);
+  z-index: 20;
+}
+#title-block-header .title,
+h1.title {
+  font-family: var(--sans);
+  font-size: 1.32rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-transform: none;
+  color: var(--ink);
+  margin: 0;
+  padding: 0;
+  line-height: 1.1;
+  text-align: left;
+  page-break-after: auto;
+  break-after: auto;
+}
+#title-block-header .title::before {
+  content: "";
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: 11px;
+  border-radius: 2px;
+  background: var(--accent);
+  transform: translateY(-1px);
+}
+
+/* ---- Sidebar table of contents -------------------------------- */
+
+#TOC {
+  position: fixed;
+  top: var(--head-h);
+  left: 0;
+  width: var(--side-w);
+  height: calc(100vh - var(--head-h));
+  box-sizing: border-box;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 26px 22px 40px;
+  background: var(--bg-side);
+  border-right: 1px solid var(--rule-2);
+  z-index: 10;
+}
+#TOC::before {
+  content: "Contents";
+  display: block;
+  font-family: var(--sans);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  padding: 0 10px;
+  margin-bottom: 12px;
+}
+
+#TOC ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+#TOC li { margin: 1px 0; max-width: none; }
+
+#TOC a {
+  display: block;
+  font-family: var(--sans);
+  font-size: 0.92rem;
+  line-height: 1.32;
+  color: var(--ink);
+  text-decoration: none;
+  padding: 7px 10px;
+  border-radius: 7px;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+#TOC a:hover { background: color-mix(in srgb, var(--accent) 9%, transparent); }
+#TOC a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* Part / chapter eyebrow inside TOC links */
+#TOC .part-label,
+#TOC .chapter-label {
+  display: block;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  margin-bottom: 2px;
+}
+
+/* Top-level links (Introduction, Parts) read as section heads */
+#TOC > ul > li > a {
+  font-weight: 600;
+  margin-top: 6px;
+}
+
+/* Nested chapter list, with a guide rule */
+#TOC ul ul {
+  margin: 2px 0 8px;
+  padding-left: 11px;
+  border-left: 1px solid var(--rule-2);
+}
+#TOC ul ul a { font-weight: 400; color: var(--ink-2); }
+#TOC ul ul a:hover { color: var(--ink); }
+#TOC ul ul .chapter-label { margin-bottom: 1px; }
+
+/* ---- Code ------------------------------------------------------ */
+
+code, kbd, samp {
+  font-family: var(--mono);
+  font-size: 0.86em;
+}
+:not(pre) > code {
+  background: var(--code-bg);
+  color: var(--ink);
+  padding: 0.12em 0.4em;
+  border-radius: 5px;
+  border: 1px solid var(--rule);
+  white-space: nowrap;
+}
+pre {
+  font-family: var(--mono);
+  background: var(--block-bg);
+  border: 1px solid var(--rule-2);
+  border-radius: 10px;
+  padding: 18px 20px;
+  margin: 1.5em 0;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-x: auto;
+  max-width: none;
+}
+pre code {
+  font-size: 0.82em;
+  background: none;
+  border: none;
+  padding: 0;
+  white-space: pre-wrap;
+}
+
+/* ---- Blockquote ------------------------------------------------ */
+
+blockquote {
+  margin: 1.5em 0;
+  padding: 0.2em 0 0.2em 1.2em;
+  border-left: 3px solid var(--rule-2);
+  color: var(--ink-2);
+  font-style: italic;
+}
+blockquote p { margin-bottom: 0.6em; }
+blockquote p:last-child { margin-bottom: 0; }
+
+/* ---- Lists ----------------------------------------------------- */
+
+ul, ol { margin: 0 0 1.05em 1.4em; padding: 0; }
+li { margin: 0.3em 0; }
+li > ul, li > ol { margin-bottom: 0.3em; }
+
+/* ---- Figures & images ----------------------------------------- */
+
+figure { margin: 1.8em 0; text-align: center; }
+figure img, img.center { max-width: 100%; height: auto; border-radius: 6px; }
+figcaption {
+  font-family: var(--sans);
+  font-size: 0.82em;
+  font-style: normal;
+  color: var(--ink-2);
+  margin-top: 0.6em;
+}
+
+/* ---- Thematic break (* * *) ----------------------------------- */
+
+hr {
+  border: none;
+  text-align: center;
+  margin: 2.4em 0;
+}
+hr::after {
+  content: "\2217\00a0\00a0\2217\00a0\00a0\2217";  /* ∗  ∗  ∗ */
+  font-family: var(--serif);
+  color: var(--ink-2);
+  letter-spacing: 0.2em;
+  font-size: 1em;
+}
+
+/* ---- Footnotes ------------------------------------------------- */
+
+a.footnote-ref {
+  vertical-align: super;
+  font-size: 0.72em;
+  line-height: 0;
+  text-decoration: none;
+  color: var(--accent);
+  font-family: var(--sans);
+  padding: 0 0.1em;
+}
+.footnotes {
+  margin-top: 3em;
+  font-size: 0.92em;
+  color: var(--ink-2);
+}
+.footnotes hr {
+  border-top: 1px solid var(--rule-2);
+  width: 56px;
+  margin: 1.5em 0;
+}
+.footnotes hr::after { content: none; }
+
+/* ---- :target highlight (pure-CSS nav feedback) ---------------- */
+
+section:target > h1,
+section:target > h2,
+section:target > h3 {
+  position: relative;
+}
+section:target > h1::before,
+section:target > h2::before,
+section:target > h3::before {
+  content: "";
+  position: absolute;
+  left: -22px;
+  top: 0.15em;
+  bottom: 0.15em;
+  width: 3px;
+  border-radius: 3px;
+  background: var(--accent);
+}
+
+/* ================================================================
+   Responsive: collapse the fixed sidebar on narrow screens.
+   The TOC becomes a normal block at the top of the page.
+   ================================================================ */
+
+@media (max-width: 900px) {
+  body { padding-left: 0; }
+
+  #title-block-header {
+    position: static;
+    width: auto;
+    height: auto;
+    padding: 20px 24px;
+    border-right: none;
+  }
+  #TOC {
+    position: static;
+    width: auto;
+    height: auto;
+    max-height: none;
+    overflow: visible;
+    border-right: none;
+    border-bottom: 1px solid var(--rule);
+    padding: 20px 24px 26px;
+  }
+  #TOC ul ul { border-left-color: var(--rule); }
+
+  body > section,
+  body > .footnotes {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+  body > section:first-of-type { padding-top: 34px; }
+}
+
+@media (max-width: 560px) {
+  body { font-size: 18px; }
+}

@@ -1,0 +1,23 @@
+# book_style.yaml
+#
+# HOW the book looks -- appearance only. Page size, margins, fonts, and the
+# optional page furniture. Point many books at one style file to restyle them
+# all from a single place; the manuscript and its metadata never change.
+#
+# These docs deliberately use only fonts bundled in the Docker image, so they
+# build with no font setup at all.
+
+trim: 6x9                       # KDP US trade paperback (or a {width, height} map)
+margins:                        # inches; omit to let --pages pick a KDP-safe gutter
+  inside: 0.875                 # binding side -- wider; KDP scales this with page count
+  outside: 0.625
+  top: 0.75
+  bottom: 0.75
+
+font: "Libertinus Serif"        # body face; bundled in Typst, no setup needed
+heading-font: "Liberation Sans" # parts, chapters, headings; bundled in the image
+font-size: 11pt                 # body size
+
+toc: true                       # generate the Contents page
+running-heads: true             # book title (verso) / chapter (recto); print only
+title-rule: true                # rule between title and subtitle on the title page
