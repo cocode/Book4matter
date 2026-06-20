@@ -45,7 +45,23 @@ function Blocks(blocks)
   local i = 1
   while i <= #blocks do
     local b = blocks[i]
-    if b.t == "Header" then
+    if b.t == "Header" and b.level == 6 and blocks[i + 1]
+        and blocks[i + 1].t == "Para" then
+      -- Run-in heading: fold a level-6 heading into the first line of the
+      -- paragraph that follows it. The heading's words are wrapped in
+      -- `#runin[...]` (defined in book.typ), which sets the heading font, bolds
+      -- them, adds a full stop and a little space; the paragraph then flows on
+      -- from there. Both blocks become one Para. A level-6 heading *not*
+      -- followed by a paragraph falls through to book.typ's block fallback.
+      local para = blocks[i + 1]
+      local merged = pandoc.List()
+      merged:insert(pandoc.RawInline("typst", "#runin["))
+      merged:extend(b.content)
+      merged:insert(pandoc.RawInline("typst", "]"))
+      merged:extend(para.content)
+      out:insert(pandoc.Para(merged))
+      i = i + 1  -- also consume the paragraph (the loop tail advances past it)
+    elseif b.t == "Header" then
       if common.pop_class(b, "new-page") then
         out:insert(pandoc.RawBlock("typst", "#pagebreak(weak: true)"))
       end
@@ -93,15 +109,26 @@ end
 -- to the raw state blocks emitted above. A book with no parts at all gets
 -- the switch at the very top: arabic page 1 is its first content page, as
 -- before.
+local parts_recto = (os.getenv("BF_PARTS_RECTO") == "1")
+
 function Pandoc(doc)
   local at = 1
+  local has_part = false
   for i, b in ipairs(doc.blocks) do
     if b.t == "Header" and b.level == 1 then
       at = i
+      has_part = true
       break
     end
   end
   doc.blocks:insert(at, pandoc.RawBlock("typst",
     '#set page(numbering: "1")\n#counter(page).update(1)'))
+  -- When parts open on a recto, break to the odd page *before* that reset, so
+  -- the blank Typst inserts stays in the roman front matter and the part's own
+  -- page becomes arabic 1 (rather than the inserted blank taking number 1).
+  if parts_recto and has_part then
+    doc.blocks:insert(at, pandoc.RawBlock("typst",
+      '#pagebreak(weak: true, to: "odd")'))
+  end
   return doc
 end

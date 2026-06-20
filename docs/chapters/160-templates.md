@@ -42,10 +42,14 @@ change beyond the scope of styling.
 ### Restyling the website without touching the template
 
 The HTML output is styled by `epub.css`, but you need not edit that shared file
-to restyle the *site*. The generated page is plain, semantic HTML --- a `#TOC`
-nav, one `section` per part and chapter, `.part-label` / `.chapter-label` spans
---- so you can layer a separate stylesheet over it and let it win on the cascade.
-That is exactly how this manual's own website is built: `docs/build.sh` links a
-`book4matter-web.css` into the generated page after the built-in styles. It gives
-the site its own look without disturbing the templates that the print and EPUB
-outputs share.
+to restyle the *site*. Every page that `bf html` generates links an optional
+`book_style.css` *after* the built-in styles, so any rules in that file win on the
+cascade. The file is optional: drop a `book_style.css` next to the generated page
+--- or have your build script copy one into `out/` --- and the site picks it up;
+leave it out and the page falls back to the built-in styling. The page is plain,
+semantic HTML --- a `#TOC` nav, one `section` per part and chapter, `.part-label`
+/ `.chapter-label` spans --- so a stylesheet has clean hooks to target.
+
+This manual does exactly that: `docs/build.sh` copies its `book4matter-web.css`
+into `out/book_style.css`, giving the site its own look without disturbing the
+templates that the print and EPUB outputs share.

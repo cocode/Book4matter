@@ -54,7 +54,10 @@ The EPUB cover, if any, comes from the `cover:` key in `book_metadata.yaml`.
 ```
 
 - The whole-book form is a single self-contained page (resources embedded) with a
-  clickable table of contents --- the form used for the book4matter website.
+  clickable table of contents --- the form used for the book4matter website. It
+  links an optional `book_style.css` after the embedded styles, so dropping a
+  `book_style.css` next to the page (or copying your project's CSS into `out/`
+  under that name) themes the site; omit it and the embedded styling stands.
 - `toc` emits a `<nav class="book-toc">` of plain, unlinked titles to drop into a
   web page (the in-book anchors would point nowhere off-site).
 - `chapter NN` picks one chapter: `NN` matches the leading number in a filename

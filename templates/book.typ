@@ -48,6 +48,17 @@
   pagebreak(weak: true)
 }
 
+// Run-in heading (level 6). parts.lua merges a level-6 heading into the start
+// of the paragraph it heads and wraps its words in `#runin[...]`, so the
+// heading shares the first line of the body instead of standing on its own.
+// The font isn't known at module load (it comes from book.yaml via meta), so
+// book() stashes it in this state and the helper reads it at render time.
+#let runin-font = state("runin-font", "Liberation Sans")
+#let runin(body) = context {
+  text(font: runin-font.get(), weight: "bold")[#body.]
+  h(0.4em)
+}
+
 // Spelled-out part ordinals for the contents page ("PART TWO · BASICS").
 // Books with more than twenty parts fall back to the bare numeral.
 #let part-words = ("One", "Two", "Three", "Four", "Five", "Six", "Seven",
@@ -63,6 +74,10 @@
   // line, so flatten the breaks to spaces for those; only the title page
   // splits on "\n".
   let flat-title = meta.title.replace("\n", " ")
+
+  // Hand the heading font to the run-in helper (level-6 headings merged into
+  // body text by parts.lua), which can't see `meta` from module scope.
+  runin-font.update(meta.heading-font)
 
   // --- PDF document metadata ---
   set document(title: flat-title, author: meta.authors)
@@ -133,17 +148,19 @@
     number-type: "lining",
   )
 
-  // first-line-indent with `all: true` indents every paragraph's first line,
-  // including the first one after a heading — the book's house style, with no
-  // flush-left chapter/section openers. The (amount:, all:) form needs Typst
-  // >= 0.12; the pre-0.12 fallback can only set the amount, so there the first
-  // paragraph after a heading would stay un-indented.
-  let indent = if sys.version >= version(0, 12, 0) {
-    (amount: 1.2em, all: true)
+  // Paragraph first-line indent, chosen by book_style.yaml `indent:`:
+  //   all      — indent every paragraph, openers included (the house default).
+  //   standard — flush opener after a heading, the rest indented (the classic
+  //              trade-book look; matches what EPUB/HTML do).
+  //   none     — no indent; paragraphs are told apart by the block spacing.
+  // The (amount:, all:) form needs Typst >= 0.12 (the image ships a later one);
+  // `all: false` is what leaves the post-heading opener flush.
+  let fli = if meta.indent == "none" {
+    0pt
   } else {
-    1.2em
+    (amount: 1.2em, all: meta.indent == "all")
   }
-  set par(justify: true, leading: 0.72em, first-line-indent: indent)
+  set par(justify: true, leading: 0.72em, first-line-indent: fli)
 
   // --- Headings: sans-serif face (Helvetica-style), sized per level ---
   //
@@ -160,7 +177,12 @@
   show heading: set text(font: meta.heading-font, hyphenate: false)
   show heading: set par(justify: false)
   show heading.where(level: 1): it => {
-    pagebreak(weak: true)
+    // parts-recto: open on a recto (odd) page. parts.lua makes the first part's
+    // break happen before the numbering reset; this weak break handles later
+    // parts and is a no-op for the first (already on its recto page).
+    if meta.parts-recto { pagebreak(weak: true, to: "odd") } else {
+      pagebreak(weak: true)
+    }
     set align(center)
     v(1fr)
     context {
@@ -190,7 +212,12 @@
     }
   }
   show heading.where(level: 2): it => {
-    pagebreak(weak: true)
+    // chapters-recto: open the chapter on a recto (odd) page; a blank verso is
+    // inserted before it when the previous page lands odd.
+    if meta.chapters-recto { pagebreak(weak: true, to: "odd") } else {
+      pagebreak(weak: true)
+    }
+    let centered = meta.chapter-style == "centered"
     v(3em)
     context {
       if unnumbered-next.get() {
@@ -201,35 +228,52 @@
         // argument reads get() will stall (every chapter past a certain
         // point ends up sharing the same number).
         chapter-num.update(prev => prev + 1)
-        text(size: 0.9em, weight: "regular")[
-          CHAPTER #context chapter-num.get()
-        ]
-        parbreak()
-        v(0.4em)
+        if centered {
+          // Centered opener: a bare chapter numeral over a short rule. Wraps a
+          // long title more gracefully than the flush-left label does.
+          align(center)[
+            #text(size: 1.3em, weight: "bold")[#context chapter-num.get()]
+            #v(0.45em)
+            #line(length: 1.1in, stroke: 0.5pt)
+          ]
+          v(0.9em)
+        } else {
+          text(size: 0.9em, weight: "regular")[
+            CHAPTER #context chapter-num.get()
+          ]
+          parbreak()
+          v(0.4em)
+        }
       }
     }
     set text(size: 1.4em, weight: "bold")
-    block(upper(it.body))
+    // Centered style centres the (possibly wrapping) title; left keeps it flush.
+    if centered { align(center, block(upper(it.body))) } else { block(upper(it.body)) }
     // Hard (non-weak) space so it survives next to a level-3 heading or a
     // chapter that page-breaks immediately after the title.
     v(4em)
   }
   show heading.where(level: 3): it => {
     v(2.4em, weak: true)
-    set text(size: 1.2em, weight: "bold")
-    block(below: 1em, sticky: true, upper(it.body))
+    set text(size: 1.4em, weight: "bold")
+    block(below: 1em, sticky: true, text(tracking: 0.05em, upper(it.body)))
   }
   show heading.where(level: 4): it => {
     v(2em, weak: true)
-    block(below: 1em, sticky: true, text(weight: "bold", size: 1em, upper(it.body)))
+    block(below: 1em, sticky: true, text(weight: "bold", size: 1.15em, tracking: 0.05em, upper(it.body)))
   }
   show heading.where(level: 5): it => {
     v(2em, weak: true)
-    block(below: 1em, sticky: true, text(weight: "regular", size: 1em, upper(it.body)))
+    block(below: 1em, sticky: true, text(weight: "bold", size: 1em, it.body))
   }
+  // Level 6 = run-in: normally parts.lua merges a level-6 heading into the
+  // start of the paragraph it heads (see #runin above), so this show rule
+  // never fires in ordinary flow. It only catches a level-6 heading parts.lua
+  // couldn't merge -- e.g. one inside a wrap body, serialized before parts.lua
+  // runs -- which is rendered as a plain bold block so nothing is lost.
   show heading.where(level: 6): it => {
-    v(2em, weak: true)
-    block(below: 1em, sticky: true, text(weight: "regular", size: 1em, upper(it.body)))
+    v(1em, weak: true)
+    block(below: 0.6em, sticky: true, text(weight: "bold", size: 1em, it.body))
   }
 
   // --- Links: print-friendly. Never hyphenate a URL or email -- a soft hyphen
@@ -448,6 +492,24 @@
       )
     }))
   }
+  // Level 3 (topics) appear only when toc-depth >= 3. They nest one step deeper
+  // than their chapter, set a little smaller and lighter so the three levels
+  // stay visually distinct.
+  show outline.entry.where(level: 3): it => {
+    show linebreak: _ => " "
+    block(above: 0.5em, link(it.element.location(), context {
+      let under-part = query(heading.where(level: 1)
+        .before(it.element.location())).len() > 0
+      grid(
+        columns: (1fr, auto),
+        column-gutter: 1.5em,
+        align: (left + bottom, right + bottom),
+        pad(left: (if under-part { 1em } else { 0pt }) + 1.2em,
+          text(size: 0.95em, fill: luma(35%), it.body())),
+        it.page(),
+      )
+    }))
+  }
   if meta.toc {
     page[
       #set par(justify: false)
@@ -456,7 +518,7 @@
       #text(font: meta.heading-font, size: 2em)[Contents]
       #v(0.5em)
       #line(length: 100%, stroke: 0.6pt)
-      #outline(title: none, depth: 2)
+      #outline(title: none, depth: meta.toc-depth)
     ]
   }
 

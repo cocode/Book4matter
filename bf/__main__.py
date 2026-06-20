@@ -34,7 +34,7 @@ MAIN_TYP = '''#import "book.typ": book
 # book.typ is copied into out/ alongside _body.typ, so the relative import
 # resolves.
 BODY_PRELUDE = '''#import "@preview/wrap-it:0.1.1": wrap-content
-#import "book.typ": part-num, unnumbered-next, part-text, part-text-next
+#import "book.typ": part-num, unnumbered-next, part-text, part-text-next, runin
 '''
 
 
@@ -177,6 +177,14 @@ def render_meta(cfg, pages, build_id=None):
     if isinstance(font_size, (int, float)):
         font_size = f"{font_size}pt"
 
+    indent = str(cfg.get("indent", "all")).lower()
+    if indent not in ("all", "standard", "none"):
+        die(f"indent must be 'all', 'standard', or 'none' (got {indent!r})")
+    toc_depth = int(cfg.get("toc-depth", 2))
+    chapter_style = str(cfg.get("chapter-style", "centered")).lower()
+    if chapter_style not in ("left", "centered"):
+        die(f"chapter-style must be 'left' or 'centered' (got {chapter_style!r})")
+
     build_id_typ = typst_str(build_id) if build_id else "none"
 
     return (
@@ -196,8 +204,13 @@ def render_meta(cfg, pages, build_id=None):
         f"  font: {typst_str(cfg.get('font', 'Libertinus Serif'))},\n"
         f"  heading-font: {typst_str(cfg.get('heading-font', 'Liberation Sans'))},\n"
         f"  font-size: {font_size},\n"
+        f"  indent: {typst_str(indent)},\n"
         f"  toc: {str(bool(cfg.get('toc', True))).lower()},\n"
+        f"  toc-depth: {toc_depth},\n"
         f"  running-heads: {str(bool(cfg.get('running-heads', False))).lower()},\n"
+        f"  parts-recto: {str(bool(cfg.get('parts-recto', False))).lower()},\n"
+        f"  chapters-recto: {str(bool(cfg.get('chapters-recto', False))).lower()},\n"
+        f"  chapter-style: {typst_str(chapter_style)},\n"
         f"  also-by: {render_also_by(cfg)},\n"
         f"  build-id: {build_id_typ},\n"
         ")\n"
@@ -238,6 +251,10 @@ def build_print(bookdir, pages=None, keep=False, build_id=None):
 
     shutil.copy(TEMPLATES / "book.typ", out / "book.typ")
     (out / "_meta.typ").write_text(render_meta(cfg, pages, build_id=build_id))
+    # parts.lua reads BF_PARTS_RECTO so it can break to the odd page before the
+    # front-matter→arabic reset (see its Pandoc filter); an env var is the
+    # simplest way to pass a config flag into a lua filter.
+    env = {**os.environ, "BF_PARTS_RECTO": "1" if cfg.get("parts-recto") else "0"}
     run(["pandoc", *[str(c) for c in chapters],
          "-f", "markdown", "-t", "typst", "--wrap=preserve",
          # wrap.lua first so it packages its body before parts.lua starts
@@ -246,7 +263,8 @@ def build_print(bookdir, pages=None, keep=False, build_id=None):
          # body and typst rejects pagebreaks inside content blocks.
          f"--lua-filter={TEMPLATES / 'wrap.lua'}",
          f"--lua-filter={TEMPLATES / 'parts.lua'}",
-         "-o", str(out / "_body.typ")])
+         "-o", str(out / "_body.typ")],
+        env=env)
     body_path = out / "_body.typ"
     body_path.write_text(BODY_PRELUDE + body_path.read_text())
     (out / "main.typ").write_text(MAIN_TYP)
@@ -328,9 +346,9 @@ def build_epub(bookdir, check=True, build_id=None):
     cmd = ["pandoc", *[str(c) for c in chapters],
            "-f", "markdown", "-t", "epub3",
            "--wrap=preserve",
-           # depth=2 -> parts (h1) + chapters (h2) only; deeper headings are
-           # still in-document but don't clutter the EPUB nav.
-           "--toc", "--toc-depth=2",
+           # toc-depth from book_style.yaml (default 2 -> parts + chapters);
+           # deeper headings stay in-document but don't clutter the nav.
+           "--toc", f"--toc-depth={int(cfg.get('toc-depth', 2))}",
            # epub-wrap rewrites .wrap-right/.wrap-left images into <figure>s
            # with the class on the figure (CSS does the float). epub-parts
            # splits "Part I - Title" headings into two lines and strips
@@ -397,7 +415,7 @@ def build_html(bookdir):
 
     cmd = _html_cmd(chapters, bookdir,
                     "--standalone", "--section-divs",
-                    "--toc", "--toc-depth=2",
+                    "--toc", f"--toc-depth={int(cfg.get('toc-depth', 2))}",
                     f"--lua-filter={TEMPLATES / 'epub-wrap.lua'}",
                     f"--lua-filter={TEMPLATES / 'epub-parts.lua'}",
                     f"--css={TEMPLATES / 'epub.css'}", "--embed-resources",
@@ -405,6 +423,13 @@ def build_html(bookdir):
                     "--metadata", f"lang={cfg.get('language', 'en')}",
                     "-o", str(html))
     run(cmd, cwd=str(bookdir))
+    # Link an optional per-book stylesheet, added AFTER pandoc's embedded styles
+    # so its rules win on the cascade. The file is optional: drop a book_style.css
+    # next to the page (or have a build script copy one into out/) to theme the
+    # site; leave it absent and the page falls back to the embedded epub.css.
+    # (`html toc` / `html chapter` emit fragments with no <head>, so no link.)
+    head_link = '  <link rel="stylesheet" href="book_style.css" />\n'
+    html.write_text(html.read_text().replace("</head>", head_link + "</head>", 1))
     print(f"✓ wrote {html}")
 
 

@@ -29,12 +29,10 @@ cd "$ROOT"
 for fmt in "${formats[@]}"; do
   ./run.sh "$fmt" docs/ --build-id "$BUILD_ID"
   if [[ "$fmt" == "html" ]]; then
-    # bf html hard-codes the shared epub.css. Layer the site stylesheet on top:
-    # copy it next to the page and link it AFTER the generator's <style> blocks,
-    # so its rules win on the cascade (as book4matter-web.css's header advises).
-    cp "$HERE/book4matter-web.css" "$HERE/out/book4matter-web.css"
-    perl -0pi -e 's{</head>}{  <link rel="stylesheet" href="book4matter-web.css" />\n</head>}' \
-      "$HERE/out/book4matter.html"
-    echo "✓ linked book4matter-web.css into out/book4matter.html" >&2
+    # bf html links an optional book_style.css; supply it by copying our site
+    # stylesheet into out/ under that name. The tool emits the <link> itself, so
+    # there is nothing to inject here.
+    cp "$HERE/book4matter-web.css" "$HERE/out/book_style.css"
+    echo "✓ copied book4matter-web.css -> out/book_style.css" >&2
   fi
 done
