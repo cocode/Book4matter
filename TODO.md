@@ -3,7 +3,13 @@
 Project-level todo list. Outlives sessions (unlike the harness TaskList tool).
 Edit freely; Claude reads and writes it on request.
 
+- [ ] Docker setup is wrong, it's mounting whole directories. This should be in permanent memory.
+- [ ] HR does not work in print "A --- scene break renders as * * * in EPUB/HTML but crashes the print build (unknown variable: horizontalrule)"
+
+- [ ] Should we build and publish a docker image?
+
 ## Blocked / deferred
+
 - [ ] **Body widow/orphan control.** No single paragraph line stranded at a page
   top/bottom. BLOCKED: Typst 0.14.2 has no `par(widows/orphans)` and no
   block-level equivalent; the only workaround (`breakable: false`) looks worse.
