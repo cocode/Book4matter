@@ -72,6 +72,20 @@ subtitle on the title page. Defaults to `false`.
 centered beneath --- which carries a wrapped title gracefully. `left` instead
 prints a "CHAPTER N" label with the title flush left. Defaults to `centered`.
 
+**`part-style`** --- *Print only.* The part divider's layout. `classic` (the
+default) prints an all-caps label and arabic number ("PART 1") above the title in
+bold capitals, sitting a third of the way down the page. `fancy` instead sets the
+divider in the body serif as a small letterspaced label, a large Roman numeral, a
+short rule, and the title in title-case --- the literary look of a trade book's
+section openers. Any text written beneath the part heading in its chapter file
+prints as a centered italic blurb on the divider itself. Defaults to `classic`.
+
+**`part-label`** --- The word for the top-level division, replacing "Part"
+everywhere it is auto-generated: the print divider and table of contents (set in
+capitals there, so `SECTION TWO · ...`), and the EPUB and HTML labels. Defaults
+to `Part`. Set it to `Section`, `Book`, `Volume`, or anything else. It does not
+touch wording you write yourself in a heading or in body text.
+
 **`parts-recto`** --- *Print only.* When `true`, every part divider begins on a
 recto (the right-hand, odd-numbered page); a blank page is inserted before it when
 the previous page would otherwise leave it on a verso. The blank is counted and
