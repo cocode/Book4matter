@@ -329,9 +329,18 @@
   // --- Links: print-friendly. Never hyphenate a URL or email -- a soft hyphen
   // reads as part of the address (e.g. "thero-tarywaltz@..."). For external web
   // links append the destination in parentheses so a print reader can see where
-  // it points; a bare autolink already shows its URL, and mailto:/internal links
-  // keep their visible text. (EPUB/HTML don't use this template, so their links
-  // stay live and bare.)
+  // it points; a bare autolink already shows its URL, and mailto: links keep
+  // their visible text. (EPUB/HTML don't use this template, so their links stay
+  // live and bare.)
+  //
+  // Internal links (TOC entries, cross-references) depend on the target. The
+  // `pdf` target builds a digital PDF where they're a feature, so meta.links
+  // == "live" keeps them clickable. The `print` target builds an interior for
+  // KDP and other publishers, which forbid hyperlinks: meta.links == "print"
+  // (the default) drops the link wrapper so only the visible text is emitted --
+  // no annotation -- otherwise KDP reports "non-printable markup removed" on the
+  // affected pages. Older _meta.typ files predate the key, hence the default.
+  let live-links = meta.at("links", default: "print") == "live"
   show link: it => {
     set text(hyphenate: false)
     let d = it.dest
@@ -342,8 +351,10 @@
       if bare { it } else { [#it.body~(#d)] }
     } else if type(d) == str and d.starts-with("mailto:") {
       box(it.body)  // keep the address whole -- never split at an internal hyphen
+    } else if live-links {
+      it  // digital PDF: internal links stay clickable
     } else {
-      it  // internal links (TOC, footnotes) unchanged
+      it.body  // print: visible text only, no link annotation
     }
   }
 

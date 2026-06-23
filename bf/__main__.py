@@ -172,7 +172,7 @@ def typst_array_raw(items):
     return "(" + ", ".join(items) + ("," if len(items) == 1 else "") + ")"
 
 
-def render_meta(cfg, pages, build_id=None):
+def render_meta(cfg, pages, build_id=None, links="print"):
     w, h = parse_trim(cfg)
     inside, outside, top, bottom = resolve_margins(cfg, pages)
 
@@ -226,6 +226,10 @@ def render_meta(cfg, pages, build_id=None):
         f"  part-label: {typst_str(part_label)},\n"
         f"  also-by: {render_also_by(cfg)},\n"
         f"  build-id: {build_id_typ},\n"
+        # "live" keeps internal links (TOC/cross-refs) clickable for the digital
+        # `pdf` target; "print" drops them so the KDP interior carries no link
+        # annotations. book.typ's show-link rule reads this.
+        f"  links: {typst_str(links)},\n"
         ")\n"
     )
 
@@ -253,7 +257,15 @@ def resolve_chapters(bookdir, cfg):
 
 # ---------------------------------------------------------------------- build
 
-def build_print(bookdir, pages=None, keep=False, build_id=None):
+def build_print(bookdir, pages=None, keep=False, build_id=None, links="print"):
+    """Build a PDF from a book directory.
+
+    links="print" (the `print` target) drops internal-link annotations so the
+    interior is acceptable to KDP and other publishers that forbid hyperlinks.
+    links="live" (the `pdf` target) keeps TOC and cross-reference links
+    clickable for a digital PDF, and names the file without the "-interior"
+    suffix so the two builds don't overwrite each other in out/.
+    """
     bookdir = bookdir.resolve()
     cfg = load_config(bookdir)
     chapters = resolve_chapters(bookdir, cfg)
@@ -263,7 +275,8 @@ def build_print(bookdir, pages=None, keep=False, build_id=None):
     out.mkdir(exist_ok=True)
 
     shutil.copy(TEMPLATES / "book.typ", out / "book.typ")
-    (out / "_meta.typ").write_text(render_meta(cfg, pages, build_id=build_id))
+    (out / "_meta.typ").write_text(
+        render_meta(cfg, pages, build_id=build_id, links=links))
     # parts.lua reads BF_PARTS_RECTO so it can break to the odd page before the
     # front-matter→arabic reset (see its Pandoc filter); an env var is the
     # simplest way to pass a config flag into a lua filter.
@@ -283,11 +296,14 @@ def build_print(bookdir, pages=None, keep=False, build_id=None):
     (out / "main.typ").write_text(MAIN_TYP)
 
     # Name the PDF after the book so a multi-book setup doesn't end up with
-    # several files all called interior.pdf. Keep the "-interior" suffix to
-    # match KDP's convention (interior vs cover are submitted separately).
+    # several files all called interior.pdf. The print interior keeps the
+    # "-interior" suffix to match KDP's convention (interior vs cover are
+    # submitted separately); the digital `pdf` build uses the bare slug so it
+    # sits beside the interior in out/ rather than overwriting it.
     title = cfg.get("title")
     slug = slugify(title) if title else bookdir.name
-    pdf = out / f"{slug}-interior.pdf"
+    suffix = "-interior" if links == "print" else ""
+    pdf = out / f"{slug}{suffix}.pdf"
     # Optional per-book font directory. Drop .ttf/.otf files into
     # <bookdir>/fonts/ and reference the family name from book.yaml's `font:` /
     # `heading-font:` keys; typst resolves by family name from --font-path
@@ -675,6 +691,18 @@ def main(argv=None):
     b.add_argument("--build-id", default=None,
                    help="printing identifier (e.g. git short hash) shown on copyright page")
 
+    d = sub.add_parser("pdf",
+                       help="build a digital PDF (same as print, but TOC and "
+                            "footnote links stay clickable)")
+    d.add_argument("bookdir", nargs="?", default=".",
+                   help="book directory (contains book_*.yaml and chapters/)")
+    d.add_argument("--pages", type=int, default=None,
+                   help="estimated page count, to pick a KDP-appropriate gutter")
+    d.add_argument("--keep", action="store_true",
+                   help="keep intermediate .typ files in out/")
+    d.add_argument("--build-id", default=None,
+                   help="printing identifier (e.g. git short hash) shown on copyright page")
+
     e = sub.add_parser("epub", help="build an EPUB3 from a book directory")
     e.add_argument("bookdir", nargs="?", default=".",
                    help="book directory (contains book_*.yaml and chapters/)")
@@ -706,7 +734,10 @@ def main(argv=None):
     args = p.parse_args(argv)
     if args.cmd == "print":
         build_print(Path(args.bookdir), pages=args.pages, keep=args.keep,
-                    build_id=args.build_id)
+                    build_id=args.build_id, links="print")
+    elif args.cmd == "pdf":
+        build_print(Path(args.bookdir), pages=args.pages, keep=args.keep,
+                    build_id=args.build_id, links="live")
     elif args.cmd == "epub":
         build_epub(Path(args.bookdir), check=args.check, build_id=args.build_id)
     elif args.cmd == "html":
