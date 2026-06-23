@@ -41,11 +41,26 @@
 // text beneath it on the same page. (Raw `#pagebreak()` typst inside divider
 // text won't compile — pagebreaks can't live inside a content block.)
 #let part-text-next = state("part-text-next", false)
-#let part-text(body) = {
-  v(2.5em)
-  pad(x: 2em, body)
-  v(2fr)
-  pagebreak(weak: true)
+// The part-page style ("classic" = all-caps label + part number; "fancy" = the
+// letterspaced-label / Roman-numeral / rule / serif-title sample look). Stashed
+// in a state because part-text() runs at module scope and can't see `meta`.
+#let part-style = state("part-style", "classic")
+#let part-text(body) = context {
+  if part-style.get() == "fancy" {
+    // Fancy divider: the blurb sits directly under the title, centred and
+    // italic, in the body serif — matching the sample dividers.
+    v(1.4em)
+    set align(center)
+    set text(style: "italic")
+    pad(x: 1.5em, body)
+    v(2fr)
+    pagebreak(weak: true)
+  } else {
+    v(2.5em)
+    pad(x: 2em, body)
+    v(2fr)
+    pagebreak(weak: true)
+  }
 }
 
 // Run-in heading (level 6). parts.lua merges a level-6 heading into the start
@@ -78,6 +93,8 @@
   // Hand the heading font to the run-in helper (level-6 headings merged into
   // body text by parts.lua), which can't see `meta` from module scope.
   runin-font.update(meta.heading-font)
+  // Let part-text() (module scope) know which part-page style is in force.
+  part-style.update(meta.part-style)
 
   // --- PDF document metadata ---
   set document(title: flat-title, author: meta.authors)
@@ -184,24 +201,57 @@
       pagebreak(weak: true)
     }
     set align(center)
-    v(1fr)
-    context {
-      if unnumbered-next.get() {
-        unnumbered-next.update(false)
-      } else {
-        // part-num was already set by the `#part-num.update(N)` block that
-        // parts.lua emitted just before this heading; here we only read it.
-        block(text(size: 1.2em, weight: "regular")[
-          PART #context part-num.get()
-        ])
-        v(1em)
+    if meta.part-style == "fancy" {
+      // Fancy divider (sample look): a small letterspaced label, a large
+      // Roman numeral, a short rule, then the title in title-case body serif.
+      // Everything is set in the body serif rather than the sans heading face,
+      // and the label starts a FIXED distance down the page (not vertically
+      // centred), so it lands at the same height on every divider regardless of
+      // how long the title or blurb runs.
+      set text(font: meta.font)
+      v(1.25in)
+      context {
+        if unnumbered-next.get() {
+          unnumbered-next.update(false)
+        } else {
+          // part-num was set by parts.lua's `#part-num.update(N)` just before
+          // this heading; rendered as an uppercase Roman numeral here.
+          block(text(size: 0.95em, tracking: 0.35em, fill: luma(45%))[
+            #upper(meta.part-label)
+          ])
+          v(0.7em)
+          block(text(size: 4.2em, weight: "regular")[
+            #numbering("I", part-num.get())
+          ])
+          v(0.5em)
+          line(length: 0.6in, stroke: 0.5pt + luma(55%))
+          v(0.85em)
+        }
       }
+      block(text(size: 1.7em, weight: "regular")[#it.body])
+    } else {
+      // Classic divider: all-caps label + part number, bold all-caps title,
+      // the block sitting one-third down the page.
+      v(1fr)
+      context {
+        if unnumbered-next.get() {
+          unnumbered-next.update(false)
+        } else {
+          // part-num was already set by the `#part-num.update(N)` block that
+          // parts.lua emitted just before this heading; here we only read it.
+          block(text(size: 1.2em, weight: "regular")[
+            #upper(meta.part-label) #context part-num.get()
+          ])
+          v(1em)
+        }
+      }
+      block(text(size: 2em, weight: "bold", upper(it.body)))
     }
-    block(text(size: 2em, weight: "bold", upper(it.body)))
-    // 1fr above, 2fr below: the part block sits one-third down the page
-    // rather than dead centre. When divider text follows (flag set by
-    // parts.lua), #part-text supplies the bottom spacer and pagebreak
-    // instead, so the text shares the divider page with the title.
+    // Bottom trailer (both styles): a 2fr spacer then the page break. With the
+    // 1fr top of the classic style it puts the block one-third down; with the
+    // fancy style's fixed top spacer it just fills the page below the title.
+    // When divider text follows (flag set by parts.lua), #part-text supplies the
+    // bottom spacer and break instead, so the text shares the divider page.
     context {
       if part-text-next.get() {
         part-text-next.update(false)
@@ -465,7 +515,9 @@
       // Both states were set by parts.lua *before* the heading, so reading
       // them at the heading's location is reliable (see note at the top).
       let prefix = if unnumbered-next.at(it.element.location()) { "" } else {
-        "Part " + part-word(part-num.at(it.element.location())) + " · "
+        // meta.part-label (default "Part") relabels the division; it's
+        // uppercased with the rest of the entry below ("SECTION TWO · ...").
+        meta.part-label + " " + part-word(part-num.at(it.element.location())) + " · "
       }
       grid(
         columns: (1fr, auto),

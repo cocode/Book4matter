@@ -48,6 +48,13 @@ def run(cmd, **kw):
     subprocess.run(cmd, check=True, **kw)
 
 
+def filter_env(cfg):
+    """Environment for the EPUB/HTML pandoc lua filters. Carries `part-label`
+    (default "Part") via BF_PART_LABEL so epub-parts.lua's auto "Part N" labels
+    match whatever the book calls its top-level division on the print divider."""
+    return {**os.environ, "BF_PART_LABEL": str(cfg.get("part-label", "Part"))}
+
+
 def typst_str(s):
     """Quote/escape a Python value as a Typst string literal.
 
@@ -184,6 +191,10 @@ def render_meta(cfg, pages, build_id=None):
     chapter_style = str(cfg.get("chapter-style", "centered")).lower()
     if chapter_style not in ("left", "centered"):
         die(f"chapter-style must be 'left' or 'centered' (got {chapter_style!r})")
+    part_style = str(cfg.get("part-style", "classic")).lower()
+    if part_style not in ("classic", "fancy"):
+        die(f"part-style must be 'classic' or 'fancy' (got {part_style!r})")
+    part_label = str(cfg.get("part-label", "Part"))
 
     build_id_typ = typst_str(build_id) if build_id else "none"
 
@@ -211,6 +222,8 @@ def render_meta(cfg, pages, build_id=None):
         f"  parts-recto: {str(bool(cfg.get('parts-recto', False))).lower()},\n"
         f"  chapters-recto: {str(bool(cfg.get('chapters-recto', False))).lower()},\n"
         f"  chapter-style: {typst_str(chapter_style)},\n"
+        f"  part-style: {typst_str(part_style)},\n"
+        f"  part-label: {typst_str(part_label)},\n"
         f"  also-by: {render_also_by(cfg)},\n"
         f"  build-id: {build_id_typ},\n"
         ")\n"
@@ -371,7 +384,7 @@ def build_epub(bookdir, check=True, build_id=None):
             die(f"cover image not found: {cover_path}")
         cmd.insert(-2, f"--epub-cover-image={cover_path}")
 
-    run(cmd, cwd=str(bookdir))
+    run(cmd, cwd=str(bookdir), env=filter_env(cfg))
     meta_path.unlink(missing_ok=True)
 
     if check:
@@ -422,7 +435,7 @@ def build_html(bookdir):
                     "--metadata", f"title={title or slug}",
                     "--metadata", f"lang={cfg.get('language', 'en')}",
                     "-o", str(html))
-    run(cmd, cwd=str(bookdir))
+    run(cmd, cwd=str(bookdir), env=filter_env(cfg))
     # Link an optional per-book stylesheet, added AFTER pandoc's embedded styles
     # so its rules win on the cascade. The file is optional: drop a book_style.css
     # next to the page (or have a build script copy one into out/) to theme the

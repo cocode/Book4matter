@@ -27,6 +27,12 @@ local common = require("_common")
 local part_count = 0
 local chapter_count = 0
 
+-- The word for the top-level division ("Part" by default). The print side reads
+-- `part-label` from book_style.yaml; the bf CLI forwards it here via the
+-- environment so the EPUB/HTML auto-labels match (e.g. "Section 1").
+local part_label = os.getenv("BF_PART_LABEL")
+if part_label == nil or part_label == "" then part_label = "Part" end
+
 function Header(h)
   -- `.unnumbered` is the print template's signal to skip auto-numbering. We
   -- mirror that here, and strip the class so it doesn't reach the HTML
@@ -36,7 +42,7 @@ function Header(h)
   if h.level == 1 and not unnumbered then
     part_count = part_count + 1
     local new_content = pandoc.Inlines({
-      pandoc.Span({pandoc.Str("Part " .. part_count)},
+      pandoc.Span({pandoc.Str(part_label .. " " .. part_count)},
                   {class = "part-label"}),
       -- Separator so the label and title don't run together when flattened
       -- inline (the TOC); harmless in the heading, where the label is
