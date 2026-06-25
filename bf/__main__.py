@@ -10,11 +10,14 @@ Runs inside the pandoc/typst Docker image. Subcommands:
     bf import <file.docx> [bookdir] [--no-split] [--force]
 """
 import argparse
+import base64
+import mimetypes
 import os
 import re
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 import yaml
@@ -172,9 +175,14 @@ def typst_array_raw(items):
     return "(" + ", ".join(items) + ("," if len(items) == 1 else "") + ")"
 
 
-def render_meta(cfg, pages, build_id=None, links="print"):
+def render_meta(cfg, pages, build_id=None, links="print", cover=None):
     w, h = parse_trim(cfg)
     inside, outside, top, bottom = resolve_margins(cfg, pages)
+    # Optional full-bleed cover page. `cover` is a book-relative path (or None);
+    # _norm_asset makes it root-absolute so typst's image() resolves it from the
+    # book root rather than out/. Only the digital `pdf` build passes one -- the
+    # print interior omits it (KDP takes the cover as a separate upload).
+    cover_typ = typst_str(_norm_asset(cover)) if cover else "none"
 
     def opt(key):
         v = cfg.get(key)
@@ -230,6 +238,7 @@ def render_meta(cfg, pages, build_id=None, links="print"):
         # `pdf` target; "print" drops them so the KDP interior carries no link
         # annotations. book.typ's show-link rule reads this.
         f"  links: {typst_str(links)},\n"
+        f"  cover: {cover_typ},\n"
         ")\n"
     )
 
@@ -257,7 +266,8 @@ def resolve_chapters(bookdir, cfg):
 
 # ---------------------------------------------------------------------- build
 
-def build_print(bookdir, pages=None, keep=False, build_id=None, links="print"):
+def build_print(bookdir, pages=None, keep=False, build_id=None, links="print",
+                include_cover=False):
     """Build a PDF from a book directory.
 
     links="print" (the `print` target) drops internal-link annotations so the
@@ -265,6 +275,10 @@ def build_print(bookdir, pages=None, keep=False, build_id=None, links="print"):
     links="live" (the `pdf` target) keeps TOC and cross-reference links
     clickable for a digital PDF, and names the file without the "-interior"
     suffix so the two builds don't overwrite each other in out/.
+
+    include_cover adds the book.yaml `cover:` image as a full-bleed first page.
+    The digital `pdf` build sets it; the print interior leaves it off, since KDP
+    takes the cover as a separate upload.
     """
     bookdir = bookdir.resolve()
     cfg = load_config(bookdir)
@@ -274,9 +288,13 @@ def build_print(bookdir, pages=None, keep=False, build_id=None, links="print"):
     out = bookdir / "out"
     out.mkdir(exist_ok=True)
 
+    cover = cfg.get("cover") if include_cover else None
+    if cover and not (bookdir / cover).resolve().exists():
+        die(f"cover image not found: {(bookdir / cover).resolve()}")
+
     shutil.copy(TEMPLATES / "book.typ", out / "book.typ")
     (out / "_meta.typ").write_text(
-        render_meta(cfg, pages, build_id=build_id, links=links))
+        render_meta(cfg, pages, build_id=build_id, links=links, cover=cover))
     # parts.lua reads BF_PARTS_RECTO so it can break to the odd page before the
     # front-matter→arabic reset (see its Pandoc filter); an env var is the
     # simplest way to pass a config flag into a lua filter.
@@ -452,13 +470,31 @@ def build_html(bookdir):
                     "--metadata", f"lang={cfg.get('language', 'en')}",
                     "-o", str(html))
     run(cmd, cwd=str(bookdir), env=filter_env(cfg))
+    text = html.read_text()
     # Link an optional per-book stylesheet, added AFTER pandoc's embedded styles
     # so its rules win on the cascade. The file is optional: drop a book_style.css
     # next to the page (or have a build script copy one into out/) to theme the
     # site; leave it absent and the page falls back to the embedded epub.css.
     # (`html toc` / `html chapter` emit fragments with no <head>, so no link.)
     head_link = '  <link rel="stylesheet" href="book_style.css" />\n'
-    html.write_text(html.read_text().replace("</head>", head_link + "</head>", 1))
+    text = text.replace("</head>", head_link + "</head>", 1)
+    # Optional cover image as the first thing in the body. Embedded as a data URI
+    # so the standalone page (--embed-resources) stays self-contained; centred
+    # and height-capped so a tall cover doesn't dominate a wide screen.
+    cover = cfg.get("cover")
+    if cover:
+        cover_path = (bookdir / cover).resolve()
+        if not cover_path.exists():
+            die(f"cover image not found: {cover_path}")
+        mime = mimetypes.guess_type(str(cover_path))[0] or "image/jpeg"
+        b64 = base64.b64encode(cover_path.read_bytes()).decode("ascii")
+        img = ('<img class="cover" alt="Cover" '
+               f'src="data:{mime};base64,{b64}" '
+               'style="display:block;margin:1rem auto 2.5rem;'
+               'max-width:min(100%,28rem);max-height:90vh;height:auto;" />\n')
+        text = re.sub(r"(<body[^>]*>)", lambda m: m.group(1) + "\n" + img,
+                      text, count=1)
+    html.write_text(text)
     print(f"✓ wrote {html}")
 
 
@@ -628,23 +664,31 @@ def import_docx(docx, bookdir, split=True, force=False):
         die(f"{chapters_dir} already has {len(existing)} .md file(s); "
             "pass --force to overwrite")
 
-    (bookdir / "out").mkdir(exist_ok=True)
+    # Stage pandoc's markdown in a temp file (outside the book tree) rather than
+    # out/, so importing only ever writes to chapters/ and media/ -- letting the
+    # run.sh mount keep the rest of the book read-only. (--extract-media still
+    # writes the docx's images into media/, where the build expects them.)
+    #
     # `-t markdown-smart` (note the minus): the markdown writer enables the
     # `smart` extension by default, which backslash-escapes literal straight
     # quotes/apostrophes (Don\'t, \"quote\") and rewrites em dashes/ellipses as
     # ASCII (---, ...). Disabling it emits the author's punctuation verbatim as
     # Unicode, which is cleaner to hand-edit and round-trips through the build.
+    fd, staging_name = tempfile.mkstemp(prefix="bf_import_", suffix=".md")
+    os.close(fd)
+    staging = Path(staging_name)
     run(["pandoc", str(docx.resolve()),
          "-f", "docx", "-t", "markdown-smart",
          "--wrap=none", "--markdown-headings=atx",
          "--track-changes=accept", "--extract-media=media",
-         "-o", os.path.join("out", "_import.md")],
+         "-o", str(staging)],
         cwd=str(bookdir))
 
     # Pandoc tucks docx images under media/media/; flatten to a single media/.
     _flatten_media(bookdir / "media")
 
-    text = (bookdir / "out" / "_import.md").read_text().replace("media/media/", "media/")
+    text = staging.read_text().replace("media/media/", "media/")
+    staging.unlink(missing_ok=True)
     text = _rebase_images(text)
     chunks = split_chapters(text) if split else [(None, text.splitlines())]
 
@@ -661,8 +705,6 @@ def import_docx(docx, bookdir, split=True, force=False):
             name = f"{n:03d}-{slugify(title)}.md"
         (chapters_dir / name).write_text(body)
         written.append(name)
-
-    (bookdir / "out" / "_import.md").unlink(missing_ok=True)
 
     media = bookdir / "media"
     n_media = sum(1 for p in media.rglob("*") if p.is_file()) if media.exists() else 0
@@ -734,10 +776,10 @@ def main(argv=None):
     args = p.parse_args(argv)
     if args.cmd == "print":
         build_print(Path(args.bookdir), pages=args.pages, keep=args.keep,
-                    build_id=args.build_id, links="print")
+                    build_id=args.build_id, links="print", include_cover=False)
     elif args.cmd == "pdf":
         build_print(Path(args.bookdir), pages=args.pages, keep=args.keep,
-                    build_id=args.build_id, links="live")
+                    build_id=args.build_id, links="live", include_cover=True)
     elif args.cmd == "epub":
         build_epub(Path(args.bookdir), check=args.check, build_id=args.build_id)
     elif args.cmd == "html":

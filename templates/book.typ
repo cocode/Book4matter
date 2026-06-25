@@ -358,6 +358,34 @@
     }
   }
 
+  // --- Footnotes: print-friendly. Typst links the in-text marker to its note
+  // and the note's number back up to the marker. Those internal link
+  // annotations are invisible on paper but make KDP report "non-printable
+  // markup removed" on the footnote pages, exactly as the TOC links do -- and
+  // the show-link rule above never sees them, because typst's footnote
+  // machinery emits the links itself. So for the print target re-render both
+  // ends as plain superscripts with no link: identical on the page, just not
+  // clickable. The digital `pdf` target keeps the default linked rendering.
+  show footnote: it => {
+    if live-links { it } else {
+      // In-text marker: the footnote's number, superscripted, no link.
+      let num = counter(footnote).at(it.location()).first()
+      super(numbering(it.numbering, num))
+    }
+  }
+  show footnote.entry: it => {
+    if live-links { it } else {
+      // Reproduce typst's default entry layout -- first line indented by
+      // it.indent, the superscript number, then the note body; continuation
+      // lines return to the margin -- but with a plain, link-free number.
+      let loc = it.note.location()
+      let num = counter(footnote).at(loc).first()
+      par(first-line-indent: 0pt, hanging-indent: 0pt)[
+        #h(it.indent)#super(numbering(it.note.numbering, num))#it.note.body
+      ]
+    }
+  }
+
   // --- Block quotes (markdown `>`, which pandoc emits as quote(block: true)):
   // set off from the body -- slightly smaller, italic, indented both sides with
   // air above and below. Mark quotes semantically with `>`; never hand-indent.
@@ -395,6 +423,19 @@
   }
 
   // ============ FRONT MATTER (roman folios; display pages blind) ============
+
+  // Optional cover image as the very first page (digital `pdf`, plus epub/html
+  // which pandoc handles separately). The print interior never sets meta.cover
+  // -- KDP takes the cover as its own upload. Full-bleed: zero margins and no
+  // header/footer/folio, the image scaled to fill the trim (fit: "cover" so a
+  // cover sized to the trim ratio has no white bars; a slight mismatch crops
+  // rather than letterboxes). meta.at(..) tolerates older _meta.typ files.
+  let cover = meta.at("cover", default: none)
+  if cover != none {
+    page(margin: 0pt, header: none, footer: none, numbering: none)[
+      #image(cover, width: 100%, height: 100%, fit: "cover")
+    ]
+  }
 
   // Title page. Title + subtitle share the heading font (sans) so the
   // subtitle reads as a smaller sibling of the title rather than slipping
@@ -453,9 +494,9 @@
         line(length: 100%, stroke: 0.5pt)
         v(1.1em)
       } else {
-        v(0.6em)
+        v(5em)
       }
-      text(size: 1.3em, weight: "regular")[#meta.subtitle]
+      text(size: 1.3em, weight: "regular", tracking: 0.08em)[#upper(meta.subtitle)]
     }
     #v(3fr)
     #text(size: 1.4em)[#meta.authors.join(", ")]
@@ -472,7 +513,10 @@
     #if meta.isbn != none [ISBN: #meta.isbn \ ]
     #if meta.credits != none [#v(0.8em) #meta.credits \ ]
     #v(0.8em)
-    Formatted with Pandoc and Typst.
+    // Colophon. The font names are pulled from meta so this line always names
+    // the fonts the book was actually built with, whatever they are.
+    This book was formatted by Book4matter, using Pandoc and Typst.
+    The headings are set using #meta.heading-font and the body with #meta.font.
     #if meta.build-id != none [\ Printing: #meta.build-id]
   ]
 
