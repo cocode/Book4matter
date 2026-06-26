@@ -518,6 +518,7 @@
     This book was formatted by Book4matter, using Pandoc and Typst.
     The headings are set using #meta.heading-font and the body with #meta.font.
     #if meta.build-id != none [\ Printing: #meta.build-id]
+    #if meta.at("build-date", default: none) != none [\ Produced: #meta.build-date]
   ]
 
   // "Also by <author>" page. Driven by the optional `also-by:` list in

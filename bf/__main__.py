@@ -18,6 +18,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from datetime import date
 from pathlib import Path
 
 import yaml
@@ -175,6 +176,18 @@ def typst_array_raw(items):
     return "(" + ", ".join(items) + ("," if len(items) == 1 else "") + ")"
 
 
+def build_date_str(d=None):
+    """The build date for the colophon, e.g. "25 June 2026".
+
+    Worded month, no leading zero on the day -- reads as a date a person wrote,
+    not a machine timestamp. We avoid strftime's %-d (not portable) and build
+    the day from the int so there's no platform-dependent zero padding. %B is
+    English under the container's C locale, matching the English colophon prose.
+    """
+    d = d or date.today()
+    return f"{d.day} {d.strftime('%B %Y')}"
+
+
 def render_meta(cfg, pages, build_id=None, links="print", cover=None):
     w, h = parse_trim(cfg)
     inside, outside, top, bottom = resolve_margins(cfg, pages)
@@ -234,6 +247,9 @@ def render_meta(cfg, pages, build_id=None, links="print", cover=None):
         f"  part-label: {typst_str(part_label)},\n"
         f"  also-by: {render_also_by(cfg)},\n"
         f"  build-id: {build_id_typ},\n"
+        # The date this build was produced, worded ("25 June 2026") for the
+        # colophon. Always stamped (unlike build-id, which the wrapper supplies).
+        f"  build-date: {typst_str(build_date_str())},\n"
         # "live" keeps internal links (TOC/cross-refs) clickable for the digital
         # `pdf` target; "print" drops them so the KDP interior carries no link
         # annotations. book.typ's show-link rule reads this.
