@@ -50,11 +50,11 @@ the MIT-0-licensed *ilm* Typst template.
 Small Lua filters bridge Markdown and each output so the same source behaves
 consistently across formats:
 
-- **Print:** `parts.lua` numbers the parts, acts on the `{.unnumbered}` and
-  `{.new-page}` classes, switches the front matter over to the main-matter page
-  numbers, and lifts part-divider text onto the divider page; `wrap.lua` turns a
-  `.wrap-left` / `.wrap-right` image into a Typst text wrap and centers a
-  `.center` image.
+- **Print:** `parts.lua` numbers the parts, acts on the `{.unnumbered}`,
+  `{.new-page}`, and `{.section}` classes, switches the front matter over to the
+  main-matter page numbers, and lifts part-divider text onto the divider page;
+  `wrap.lua` turns a `.wrap-left` / `.wrap-right` image into a Typst text wrap and
+  centers a `.center` image.
 - **EPUB and HTML:** `epub-parts.lua` injects the "Part N" / "Chapter N" labels,
   `epub-wrap.lua` floats wrap images with CSS, and `toc-list.lua` builds the
   link-free contents used by `html toc`.

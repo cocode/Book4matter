@@ -39,6 +39,12 @@ function Header(h)
   -- writer regardless of whether we acted on it.
   local unnumbered = common.pop_class(h, "unnumbered")
 
+  -- `.section` (afterword/appendix/acknowledgments) is a top-level heading with
+  -- no auto-label -- like an unnumbered part. The print side also re-styles it,
+  -- but for EPUB/HTML "no Part N label" is the whole of it. Strip the class
+  -- either way so it doesn't leak into the HTML class list.
+  if common.pop_class(h, "section") then unnumbered = true end
+
   if h.level == 1 and not unnumbered then
     part_count = part_count + 1
     local new_content = pandoc.Inlines({

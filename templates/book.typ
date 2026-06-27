@@ -31,6 +31,14 @@
 #let chapter-num = state("chapter-num", 0)
 #let part-num = state("part-num", 0)
 #let unnumbered-next = state("unnumbered-next", false)
+// `section-next` marks a `{.section}` level-1 heading (afterword, appendix,
+// acknowledgments): the part show rule sets it like an unnumbered chapter --
+// top of the contents, but no part divider and no number -- and the contents
+// drops its "Part N ·" prefix. parts.lua sets it true before each such heading
+// and false before every normal part; like part-num it is only read at the
+// heading's location, never updated by a show rule, so the value never leaks
+// and never races the contents query.
+#let section-next = state("section-next", false)
 
 // Divider-page text. parts.lua wraps any blocks sitting between a part
 // heading and the next heading — i.e. text written under the part title in
@@ -194,6 +202,25 @@
   show heading: set text(font: meta.heading-font, hyphenate: false)
   show heading: set par(justify: false)
   show heading.where(level: 1): it => {
+    context {
+    if section-next.get() {
+      // A top-level `.section` (afterword, appendix, acknowledgments): it's a
+      // level-1 heading so it sits at the top of the contents rather than nested
+      // under a part, but it is set like an unnumbered chapter -- not a part
+      // divider. No part label, no number, and the body that follows flows as
+      // ordinary text on the same page rather than onto a divider. parts.lua set
+      // #section-next before the heading; we only read it (the contents reads it
+      // too, to drop the "Part N ·" prefix), never update it here.
+      if meta.chapters-recto { pagebreak(weak: true, to: "odd") } else {
+        pagebreak(weak: true)
+      }
+      v(3em)
+      set text(size: 1.4em, weight: "bold")
+      if meta.chapter-style == "centered" {
+        align(center, block(upper(it.body)))
+      } else { block(upper(it.body)) }
+      v(4em)
+    } else {
     // parts-recto: open on a recto (odd) page. parts.lua makes the first part's
     // break happen before the numbering reset; this weak break handles later
     // parts and is a no-op for the first (already on its recto page).
@@ -259,6 +286,8 @@
         v(2fr)
         pagebreak(weak: true)
       }
+    }
+    }
     }
   }
   show heading.where(level: 2): it => {
@@ -345,12 +374,20 @@
     set text(hyphenate: false)
     let d = it.dest
     if type(d) == str and (d.starts-with("http://") or d.starts-with("https://")) {
-      // External web link: append the URL unless the visible text already is it
-      // (a bare autolink, where pandoc emits no body).
+      // External web link. A bare autolink (no body) already shows its URL as
+      // its visible text: keep it clickable for the digital pdf, but in print
+      // emit just that text -- no annotation -- so KDP doesn't report
+      // "non-printable markup removed". A labeled link shows its words followed
+      // by the destination in parens so a print reader can still follow it.
       let bare = it.body == none or it.body == [] or it.body == [#d]
-      if bare { it } else { [#it.body~(#d)] }
+      if bare {
+        if live-links { it } else { it.body }
+      } else { [#it.body~(#d)] }
     } else if type(d) == str and d.starts-with("mailto:") {
-      box(it.body)  // keep the address whole -- never split at an internal hyphen
+      // Keep the address whole -- never split at an internal hyphen (box).
+      // Clickable for the digital pdf; in print just the boxed text, no link
+      // annotation (KDP forbids links, exactly as for TOC and footnotes).
+      if live-links { box(it) } else { box(it.body) }
     } else if live-links {
       it  // digital PDF: internal links stay clickable
     } else {
@@ -568,9 +605,12 @@
     show linebreak: _ => " "
     block(above: 1.5em, link(it.element.location(), context {
       set text(size: 0.85em, fill: luma(40%))
-      // Both states were set by parts.lua *before* the heading, so reading
-      // them at the heading's location is reliable (see note at the top).
-      let prefix = if unnumbered-next.at(it.element.location()) { "" } else {
+      // These flags were set by parts.lua *before* the heading, so reading them
+      // at the heading's location is reliable (see note at the top). A
+      // `.section` (afterword/appendix) and an `.unnumbered` part both drop the
+      // "Part N ·" prefix, leaving just the title.
+      let prefix = if (section-next.at(it.element.location())
+          or unnumbered-next.at(it.element.location())) { "" } else {
         // meta.part-label (default "Part") relabels the division; it's
         // uppercased with the rest of the entry below ("SECTION TWO · ...").
         meta.part-label + " " + part-word(part-num.at(it.element.location())) + " · "

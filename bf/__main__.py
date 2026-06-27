@@ -38,7 +38,7 @@ MAIN_TYP = '''#import "book.typ": book
 # book.typ is copied into out/ alongside _body.typ, so the relative import
 # resolves.
 BODY_PRELUDE = '''#import "@preview/wrap-it:0.1.1": wrap-content
-#import "book.typ": part-num, unnumbered-next, part-text, part-text-next, runin
+#import "book.typ": part-num, unnumbered-next, section-next, part-text, part-text-next, runin
 '''
 
 

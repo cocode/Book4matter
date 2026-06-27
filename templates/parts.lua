@@ -30,6 +30,13 @@ local common = require("_common")
 -- file at once, so a single counter is consistent across the whole book.
 local part_count = 0
 
+-- Level-1 headings flagged `.section` (afterword, appendix, acknowledgments).
+-- Keyed by the header object so the Pandoc pass below can tell them apart from
+-- real parts when it looks for where the main matter begins -- by then the
+-- `.section` class has already been stripped, so the object identity is the
+-- only marker left.
+local section_headers = {}
+
 -- Per-heading class handling. The class is stripped from the heading so it
 -- doesn't pollute the AST further down the pipeline.
 --
@@ -40,6 +47,10 @@ local part_count = 0
 --                     state set just before the heading; pandoc's `{-}`
 --                     shorthand also maps here. A single state covers both
 --                     levels because it's consumed by the very next heading.
+--   `.section`     -- on H1, render the heading like an unnumbered chapter
+--                     instead of a part divider: a top-of-contents entry with
+--                     no number whose body flows as ordinary text. For an
+--                     afterword, appendix, acknowledgments, etc.
 function Blocks(blocks)
   local out = pandoc.List()
   local i = 1
@@ -65,35 +76,56 @@ function Blocks(blocks)
       if common.pop_class(b, "new-page") then
         out:insert(pandoc.RawBlock("typst", "#pagebreak(weak: true)"))
       end
-      if (b.level == 1 or b.level == 2) and common.pop_class(b, "unnumbered") then
-        out:insert(pandoc.RawBlock("typst", "#unnumbered-next.update(true)"))
-      elseif b.level == 1 then
-        part_count = part_count + 1
-        out:insert(pandoc.RawBlock("typst",
-          "#part-num.update(" .. part_count .. ")"))
-      end
-      if b.level == 1 then
-        -- Divider text: everything up to the next heading belongs on the
-        -- part page. The flag must precede the heading (its show rule
-        -- consumes it), so look ahead before emitting anything.
-        local last = i
-        while last + 1 <= #blocks and blocks[last + 1].t ~= "Header" do
-          last = last + 1
+      if b.level == 1 and common.pop_class(b, "section") then
+        -- Top-level section (afterword/appendix/acknowledgments): a level-1
+        -- heading set like an unnumbered chapter rather than a part divider
+        -- (book.typ reads #section-next). It carries no number, and its body
+        -- flows as ordinary text, so we skip both the part counter and the
+        -- #part-text divider machinery. #section-next also makes the contents
+        -- entry drop the "Part N ·" prefix.
+        --
+        -- Like #part-num, this flag is set before the heading and only *read* by
+        -- the show rules (never updated inside them), so the contents can query
+        -- it at the heading's location without a show-rule update racing it.
+        section_headers[b] = true
+        out:insert(pandoc.RawBlock("typst", "#section-next.update(true)"))
+        out:insert(b)
+      else
+        if b.level == 1 then
+          -- Clear the section flag before a normal part, so it never leaks from
+          -- an earlier `.section` (e.g. an appendix followed by a further part).
+          out:insert(pandoc.RawBlock("typst", "#section-next.update(false)"))
         end
-        if last > i then
-          out:insert(pandoc.RawBlock("typst", "#part-text-next.update(true)"))
-          out:insert(b)
-          out:insert(pandoc.RawBlock("typst", "#part-text["))
-          for j = i + 1, last do
-            out:insert(blocks[j])
+        if (b.level == 1 or b.level == 2) and common.pop_class(b, "unnumbered") then
+          out:insert(pandoc.RawBlock("typst", "#unnumbered-next.update(true)"))
+        elseif b.level == 1 then
+          part_count = part_count + 1
+          out:insert(pandoc.RawBlock("typst",
+            "#part-num.update(" .. part_count .. ")"))
+        end
+        if b.level == 1 then
+          -- Divider text: everything up to the next heading belongs on the
+          -- part page. The flag must precede the heading (its show rule
+          -- consumes it), so look ahead before emitting anything.
+          local last = i
+          while last + 1 <= #blocks and blocks[last + 1].t ~= "Header" do
+            last = last + 1
           end
-          out:insert(pandoc.RawBlock("typst", "]"))
-          i = last
+          if last > i then
+            out:insert(pandoc.RawBlock("typst", "#part-text-next.update(true)"))
+            out:insert(b)
+            out:insert(pandoc.RawBlock("typst", "#part-text["))
+            for j = i + 1, last do
+              out:insert(blocks[j])
+            end
+            out:insert(pandoc.RawBlock("typst", "]"))
+            i = last
+          else
+            out:insert(b)
+          end
         else
           out:insert(b)
         end
-      else
-        out:insert(b)
       end
     else
       out:insert(b)
@@ -115,7 +147,10 @@ function Pandoc(doc)
   local at = 1
   local has_part = false
   for i, b in ipairs(doc.blocks) do
-    if b.t == "Header" and b.level == 1 then
+    -- A `.section` heading is level-1 but not a part, so it must not be mistaken
+    -- for where the main matter begins (e.g. a chapters-only book with an
+    -- afterword would otherwise switch to arabic folios at the afterword).
+    if b.t == "Header" and b.level == 1 and not section_headers[b] then
       at = i
       has_part = true
       break

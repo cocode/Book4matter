@@ -38,9 +38,35 @@ page numbers run from page one.
 Two optional classes ride on a heading:
 
 - `{.unnumbered}` suppresses the auto "PART N" / "CHAPTER N" label without
-  disturbing the count. (Pandoc's `{-}` shorthand means the same thing.) Use it
-  for an Introduction, a Conclusion, or an Appendix that should carry no number.
+  disturbing the count or the heading's place in the structure. (Pandoc's `{-}`
+  shorthand means the same thing.) Use it for an Introduction or a Conclusion
+  that should carry no number.
 - `{.new-page}` forces a page break just before the heading.
+
+### Top-level sections: afterwords and appendices
+
+A part divider (`#`) is a grand thing: its own page, a "PART N" label, the title
+floated a third of the way down. Back matter --- an afterword, an appendix, an
+acknowledgments page --- wants none of that pomp, yet it still belongs at the top
+level of the Contents, beside the parts rather than tucked under the last one.
+Add `{.section}` to a `#` heading to get exactly that:
+
+```
+# Afterword {.section}
+
+Thanks for reading this far.
+```
+
+On the page it is set like a chapter --- the title in your chapter style, with no
+number --- and its text flows on beneath, the way a chapter opens, instead of
+sitting alone on a divider. In the Contents it appears at the top level with no
+"PART N ·" prefix. Its folios follow its position: a `{.section}` before the
+first part is front matter, one after the parts is main matter, and it is never
+itself counted as where the main matter begins.
+
+In short: reach for `{.unnumbered}` when a heading should keep its place in the
+structure but lose its number, and for `{.section}` when a top-level heading
+should read like a chapter rather than a part.
 
 ### Text on a part divider
 
