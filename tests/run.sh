@@ -35,9 +35,12 @@ failed=()
 
 for f in "${FIXTURES[@]}"; do
   printf '\n\033[1m== %s ==\033[0m\n' "$f"
-  # `./run.sh epub` already runs epubcheck inside the container and exits
-  # non-zero on errors, so this is just orchestration.
-  if ./run.sh $REBUILD epub "$f"; then
+  # run.sh mounts the *current* directory as /work and its out/ as the one
+  # writable path, so build each fixture from inside its own dir -- exactly how a
+  # book is built -- rather than passing it as a bookdir from the repo root
+  # (which would land writes under the read-only mount). `./run.sh epub` runs
+  # epubcheck inside the container and exits non-zero on errors.
+  if ( cd "$f" && "$ROOT/run.sh" $REBUILD epub ); then
     pass=$((pass + 1))
   else
     fail=$((fail + 1))
@@ -54,8 +57,13 @@ done
 # whole-book page's TOC resolves to a section id in the document.
 check_html() {
   local f="$1" page toc missing
-  page=$(./run.sh html "$f" 2>/dev/null | awk '/ wrote /{print $NF}'); page="${page#/work/}"
-  toc=$(./run.sh html toc "$f" 2>/dev/null | awk '/ wrote /{print $NF}'); toc="${toc#/work/}"
+  # Build from inside the fixture (see the epub loop). bf reports "wrote
+  # /work/out/NAME"; strip /work/ and re-root it at the fixture dir so the host
+  # can read the file back.
+  page=$( cd "$f" && "$ROOT/run.sh" html     2>/dev/null | awk '/ wrote /{print $NF}')
+  toc=$(  cd "$f" && "$ROOT/run.sh" html toc 2>/dev/null | awk '/ wrote /{print $NF}')
+  page="$f/${page#/work/}"
+  toc="$f/${toc#/work/}"
   [ -f "$page" ] || { echo "  FAIL: no whole-book page written"; return 1; }
   [ -f "$toc" ]  || { echo "  FAIL: no toc fragment written"; return 1; }
 
