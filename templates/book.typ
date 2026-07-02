@@ -604,7 +604,12 @@
     // A forced linebreak inside a part title would wreck the one-line entry.
     show linebreak: _ => " "
     block(above: 1.5em, link(it.element.location(), context {
-      set text(size: 0.85em, fill: luma(40%))
+      // Full-strength text: a part/section is the top level, so it must not read
+      // lighter than the chapters nested under it. Depth alone carries the
+      // hierarchy -- letterspaced caps here, plain chapters below, and only the
+      // deepest level (topics) set in grey. Anything else gives an odd
+      // light-heavy-light ladder.
+      set text(size: 0.85em)
       // These flags were set by parts.lua *before* the heading, so reading them
       // at the heading's location is reliable (see note at the top). A
       // `.section` (afterword/appendix) and an `.unnumbered` part both drop the
