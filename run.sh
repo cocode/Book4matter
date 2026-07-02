@@ -14,23 +14,41 @@ if [[ "$rebuild" == "1" ]] || ! docker image inspect "$IMAGE" >/dev/null 2>&1; t
   docker build -t "$IMAGE" "$HERE"
 fi
 
-# Mount the current directory at /work. The build commands (print/pdf/epub/html)
-# only ever write to out/, so mount the book sources READ-ONLY and give read/write
-# to out/ alone -- the container cannot mutate the book sources. `import` is the
-# exception: it writes generated chapter markdown back into chapters/, so it gets
-# the book dir read-write. (out/ must exist on the host before it's mounted, or
-# the bind would create it root-owned; mkdir -p makes it with the user's owner.)
+# Mount the whole tree at /work READ-ONLY, then make writable only the *target
+# book's* writable subdirs -- so the container can never mutate the book sources
+# (or anything outside the book being built). The target book dir is taken from
+# the arguments: the last argument that is an existing directory, defaulting to
+# "." (run from inside the book). This is why both forms work and each exposes
+# exactly one book's out/:
+#     ./run.sh print docs/          # from the repo root
+#     (cd docs && ../run.sh print)  # from inside the book
+# The subcommand is args[0]; skip it so a CWD subdir that happens to share a name
+# with a subcommand (a "print" folder, say) can't be mistaken for the book.
+# (mkdir -p first so the bind mounts are owned by the user, not created
+# root-owned by Docker.)
+args=("$@")
+bookdir="."
+for ((idx = 1; idx < ${#args[@]}; idx++)); do
+  a="${args[idx]}"
+  if [[ "$a" != -* && -d "$a" ]]; then bookdir="${a%/}"; fi
+done
+# Path prefix into the book dir ("" when building from inside it).
+if [[ "$bookdir" == "." ]]; then bd=""; else bd="$bookdir/"; fi
+
 cmd="${1:-}"
 if [[ "$cmd" == "import" ]]; then
-  # import generates chapter markdown into chapters/ and extracts the docx's
-  # images into media/; it writes nothing else (its scratch markdown goes to a
-  # temp file outside the tree). So mount the book read-only with read/write on
-  # just those two dirs.
-  mkdir -p "$PWD/chapters" "$PWD/media"
-  mounts=(-v "$PWD:/work:ro" -v "$PWD/chapters:/work/chapters" -v "$PWD/media:/work/media")
+  # import generates chapter markdown into <book>/chapters and extracts the
+  # docx's images into <book>/media; it writes nothing else (its scratch
+  # markdown goes to a temp file outside the tree). So mount the tree read-only
+  # with read/write on just those two dirs.
+  mkdir -p "$PWD/${bd}chapters" "$PWD/${bd}media"
+  mounts=(-v "$PWD:/work:ro"
+          -v "$PWD/${bd}chapters:/work/${bd}chapters"
+          -v "$PWD/${bd}media:/work/${bd}media")
 else
-  mkdir -p "$PWD/out"
-  mounts=(-v "$PWD:/work:ro" -v "$PWD/out:/work/out")
+  # Build commands (print/pdf/epub/html) only ever write to <book>/out.
+  mkdir -p "$PWD/${bd}out"
+  mounts=(-v "$PWD:/work:ro" -v "$PWD/${bd}out:/work/${bd}out")
 fi
 
 # An input file passed as an argument may live outside the current directory
