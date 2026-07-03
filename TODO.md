@@ -9,6 +9,7 @@ Edit freely; Claude reads and writes it on request.
 - [ ] Add a --colophon option that lists the fonts used. Anything else? Maybe that gets the "set with Book4matter, using Pandoc and Typst in Font1, Font2
 - [ ] Should we build and publish a docker image?
 - [ ] The PDF (as opposed to print) target should have an option to include a cover. As should the epub
+- [ ] If there are no headings in chapter files, and there is more than one file, auto-number the chapters by file.
 
 ## Blocked / deferred
 
