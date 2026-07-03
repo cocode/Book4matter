@@ -5,6 +5,8 @@ interior PDF for Amazon Kindle Direct Publishing (KDP), a digital PDF to send to
 readers, an EPUB for e-readers, and a standalone HTML page for the web. You
 write once, in plain Markdown, and the same source produces all four.
 
+It can also format the pages for printing locally, for binding into a book.
+
 The book you are reading is itself a book4matter project. Its chapters live in
 `docs/chapters/` as ordinary Markdown, its identity in `docs/book_metadata.yaml`,
 and its appearance in `docs/book_style.yaml`. Building it is the surest proof
@@ -19,11 +21,17 @@ that the pipeline works:
 ./run.sh epub docs/
 # The same book as one HTML page.
 ./run.sh html docs/
+
+# The same book, four pages per sheet, formatted for folding and binding.
+./run.sh impose docs/out/book4matter-interior.pdf
 ```
 
 ### What it is for
 
-Book4matter is the tool its author uses to format the books he self-publishes.
+Book4matter is a tool used to format the books for self-publishing. You 
+write in markdown, simple text with a few simple options. Then you can distribute
+as PDF, EPUB, or HTML, or upload the print version to Amazon KDP for printing.
+
 It is a command-line tool, run inside Docker, and it is happiest in the hands of
 someone comfortable with a terminal. It is deliberately small: it does the
 typesetting a self-publisher actually needs and stops there.
