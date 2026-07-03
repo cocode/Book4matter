@@ -8,6 +8,7 @@ Runs inside the pandoc/typst Docker image. Subcommands:
     bf html toc [bookdir]               (just the contents, no links)
     bf html chapter NN [bookdir]        (one chapter as an HTML fragment)
     bf import <file.docx> [bookdir] [--no-split] [--force]
+    bf impose <file.pdf> [--paper P] [--signature N] [--single] [-o NAME]
 """
 import argparse
 import base64
@@ -18,6 +19,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import zlib
 from datetime import date
 from pathlib import Path
 
@@ -732,6 +734,149 @@ def import_docx(docx, bookdir, split=True, force=False):
               "- ensure ~300 DPI for KDP print")
 
 
+# ----------------------------------------------------------------------- impose
+
+# Sheet stock, portrait, in PDF points (1 in = 72 pt). A4 is 210×297 mm.
+_PAPER = {"letter": (612.0, 792.0), "a4": (595.276, 841.89)}
+
+
+def _signature_sides(n, sig_pages):
+    """Ordered (left_idx, right_idx) source-page pairs, one per printed sheet
+    side, for imposing `n` pages into signatures of `sig_pages` pages each.
+
+    A signature is a stack of sheets folded together; each sheet carries 4 pages
+    (2 per side). Pages are grouped into signatures of `sig_pages` (a multiple of
+    4); the last signature is padded up to a multiple of 4 with blanks (indices
+    >= n, which the caller renders as empty cells). Within a signature the
+    standard booklet order walks inward from the outermost sheet: each sheet's
+    front side is [hi, lo] and its back side is [lo+1, hi-1], so folding and
+    nesting the sheets yields straight 1,2,3,… reading order. Sides come out
+    front,back,front,back… — the order a duplexer (flip on short edge) wants.
+    """
+    sides = []
+    g = 0
+    while g < n:
+        p = min(sig_pages, n - g)
+        p += (-p) % 4                       # pad this signature to a multiple of 4
+        lo, hi = 0, p - 1
+        while lo < hi:
+            sides.append((g + hi, g + lo))          # front: left=hi,  right=lo
+            sides.append((g + lo + 1, g + hi - 1))  # back:  left=lo+1, right=hi-1
+            lo += 2
+            hi -= 2
+        g += p
+    return sides
+
+
+def _compress_streams(writer):
+    """Flate-compress every stored-uncompressed stream in `writer`, in place.
+
+    pypdf writes the merged page content -- and the form XObjects it copies from
+    the source -- uncompressed, though typst had deflated them. Re-deflating them
+    (lossless) shrinks the imposed PDF several-fold: a 43-page interior imposed
+    from 363 KB comes back 974 KB uncompressed but 182 KB after this. Streams that
+    already carry a /Filter (the embedded fonts and CMaps) are left untouched.
+
+    Uses writer._objects, a semi-internal pypdf list of every indirect object;
+    the image pins pypdf, so the attribute is stable here.
+    """
+    from pypdf.generic import StreamObject, NameObject, NumberObject
+    for obj in writer._objects:
+        if isinstance(obj, StreamObject) and "/Filter" not in obj:
+            packed = zlib.compress(obj.get_data(), 9)   # read raw bytes, then deflate
+            obj[NameObject("/Filter")] = NameObject("/FlateDecode")
+            obj[NameObject("/Length")] = NumberObject(len(packed))
+            obj._data = packed
+
+
+def impose_pdf(inp, paper="letter", signature=4, single=False,
+               margin=0.25, output=None):
+    """Impose a PDF 2-up into printable signatures for folding and hand binding.
+
+    Reads any PDF (typically a `bf print` interior) and lays its pages two-up on
+    landscape sheets so that, printed double-sided and folded down the middle,
+    each group of sheets forms a signature in reading order. Pages stay portrait
+    (no rotation) and are scaled to fit their half-sheet cell with a safe
+    `margin`, so the tool works whatever the source trim size is. Writes the
+    imposed PDF next to the input (or to `output`).
+    """
+    # Imported here so `bf print/epub/html/import` don't require pypdf to be
+    # importable -- only impose does.
+    from pypdf import PdfReader, PdfWriter, Transformation
+
+    inp = inp.resolve()
+    if not inp.exists():
+        die(f"input PDF not found: {inp}")
+    try:
+        reader = PdfReader(str(inp))
+        n = len(reader.pages)
+    except Exception as e:                  # not a PDF, encrypted, corrupt, ...
+        die(f"cannot read PDF {inp}: {e}")
+    if n == 0:
+        die(f"{inp} has no pages")
+
+    paper = paper.lower()
+    if paper not in _PAPER:
+        die(f"unknown paper {paper!r}; use 'letter' or 'a4'")
+    pw, ph = _PAPER[paper]
+    # Print on the sheet in landscape and fold down the vertical middle: two
+    # portrait cells side by side, each half the sheet wide, full sheet tall.
+    sheet_w, sheet_h = max(pw, ph), min(pw, ph)
+    cell_w = sheet_w / 2.0
+    m = float(margin) * 72.0
+    if m < 0 or 2 * m >= min(cell_w, sheet_h):
+        die(f"--margin {margin} is too large for {paper} half-pages")
+
+    if signature < 1:
+        die("--signature must be >= 1")
+    # One signature = enough sheets for the whole book, or a fixed count of sheets
+    # (4 pages each). `--single` overrides --signature.
+    sig_pages = ((n + 3) // 4) * 4 if single else 4 * signature
+
+    sides = _signature_sides(n, sig_pages)
+
+    writer = PdfWriter()
+    for left, right in sides:
+        sheet = writer.add_blank_page(width=sheet_w, height=sheet_h)
+        for cell, idx in ((0, left), (1, right)):
+            if idx >= n:
+                continue                    # blank padding page -> empty cell
+            src = reader.pages[idx]
+            w, h = float(src.mediabox.width), float(src.mediabox.height)
+            # Scale to fit the cell (minus margins), preserving aspect; centre.
+            s = min((cell_w - 2 * m) / w, (sheet_h - 2 * m) / h)
+            tx = cell * cell_w + (cell_w - w * s) / 2.0
+            ty = (sheet_h - h * s) / 2.0
+            sheet.merge_transformed_page(
+                src, Transformation().scale(s).translate(tx, ty))
+
+    # The imposed PDF lands in the SAME directory as its input -- so
+    # docs/out/x-interior.pdf -> docs/out/x-signatures.pdf. -o overrides just the
+    # filename, kept in that directory so it stays inside run.sh's writable mount.
+    if output:
+        name = output if output.endswith(".pdf") else output + ".pdf"
+        pdf = inp.parent / Path(name).name
+    else:
+        # my-book-interior.pdf -> my-book-signatures.pdf (else just append).
+        stem = inp.stem
+        if stem.endswith("-interior"):
+            stem = stem[: -len("-interior")]
+        pdf = inp.parent / f"{stem}-signatures.pdf"
+
+    _compress_streams(writer)   # re-deflate what pypdf would otherwise store raw
+    with open(pdf, "wb") as f:
+        writer.write(f)
+
+    sheets = len(sides) // 2
+    n_sig = 1 if single else -(-n // sig_pages)  # ceil-div signatures
+    print(f"✓ wrote {pdf}")
+    print(f"  {n} page(s) → {n_sig} signature(s), {sheets} sheet(s), "
+          f"{len(sides)} printed side(s) on {paper} "
+          f"({sheet_w / 72:.2f}×{sheet_h / 72:.2f} in landscape).")
+    print("  Print double-sided (flip on SHORT edge); fold each signature at the "
+          "centre, then stack & bind.")
+
+
 # ------------------------------------------------------------------------ cli
 
 def main(argv=None):
@@ -789,6 +934,24 @@ def main(argv=None):
     i.add_argument("--force", action="store_true",
                    help="overwrite an existing non-empty chapters/ directory")
 
+    m = sub.add_parser("impose",
+                       help="impose a PDF 2-up into printable signatures for "
+                            "folding and hand binding")
+    m.add_argument("input", help="path to the PDF to impose (e.g. an interior)")
+    m.add_argument("--paper", default="letter",
+                   help="sheet paper: 'letter' (default) or 'a4'")
+    m.add_argument("--signature", type=int, default=4,
+                   help="sheets per signature; each sheet folds to 4 pages "
+                        "(default: 4)")
+    m.add_argument("--single", action="store_true",
+                   help="whole book as one folded booklet (saddle-stitch)")
+    m.add_argument("--margin", type=float, default=0.25,
+                   help="inches of safe margin inside each half-page cell "
+                        "(default: 0.25)")
+    m.add_argument("-o", "--output", default=None,
+                   help="output filename (written beside the input); "
+                        "default: <input>-signatures.pdf")
+
     args = p.parse_args(argv)
     if args.cmd == "print":
         build_print(Path(args.bookdir), pages=args.pages, keep=args.keep,
@@ -808,9 +971,13 @@ def main(argv=None):
             build_html_chapter(Path(rest[1] if len(rest) > 1 else "."), rest[0])
         else:
             build_html(Path(mode if mode is not None else "."))
-    else:
+    elif args.cmd == "import":
         import_docx(Path(args.docx), Path(args.bookdir),
                     split=args.split, force=args.force)
+    else:
+        impose_pdf(Path(args.input), paper=args.paper,
+                   signature=args.signature, single=args.single,
+                   margin=args.margin, output=args.output)
 
 
 if __name__ == "__main__":

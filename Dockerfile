@@ -3,9 +3,10 @@
 FROM pandoc/typst:latest
 
 # Python + PyYAML for the bf CLI; Liberation Sans (Helvetica-metric) for
-# headings; openjdk + unzip for the epubcheck validator. (pandoc and typst
-# already ship in the base.)
-RUN apk add --no-cache python3 py3-yaml font-liberation openjdk17-jre-headless unzip
+# headings; openjdk + unzip for the epubcheck validator; py3-pypdf for the
+# `bf impose` 2-up signature imposition. (pandoc and typst already ship in the
+# base.)
+RUN apk add --no-cache python3 py3-yaml font-liberation openjdk17-jre-headless unzip py3-pypdf
 
 # Vendor the wrap-it typst package into the local package cache so typst never
 # has to reach out to the network at compile time. Pinned to a specific version

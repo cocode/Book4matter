@@ -91,6 +91,28 @@ for f in "${FIXTURES[@]}"; do
   fi
 done
 
+# Imposition smoke test. Build the example interior, impose it into signatures,
+# and assert a non-empty PDF is written. Run from inside example/ (like the epub
+# loop) so the writable out/ mount lands in the fixture. bf reports "wrote
+# /work/out/NAME"; strip /work/ and re-root at the fixture so the host can stat
+# it.
+printf '\n\033[1m== example (impose) ==\033[0m\n'
+if (
+  cd example || exit 1
+  "$ROOT/run.sh" print >/dev/null 2>&1 || { echo "  FAIL: interior build failed"; exit 1; }
+  interior=$(ls out/*-interior.pdf 2>/dev/null | head -1)
+  [ -n "$interior" ] || { echo "  FAIL: no interior PDF to impose"; exit 1; }
+  out=$( "$ROOT/run.sh" impose "$interior" 2>/dev/null | awk '/ wrote /{print $NF}' )
+  out="out/${out#/work/out/}"
+  [ -s "$out" ] || { echo "  FAIL: no signatures PDF written"; exit 1; }
+  echo "  ok: imposed $interior -> $out"
+); then
+  pass=$((pass + 1))
+else
+  fail=$((fail + 1))
+  failed+=("example (impose)")
+fi
+
 printf '\n=========================================\n'
 printf '  passed: %d\n  failed: %d\n' "$pass" "$fail"
 if (( fail > 0 )); then

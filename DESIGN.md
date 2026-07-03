@@ -169,6 +169,36 @@ gutter-aware default; with no hint, a comfortable fixed default is used. A futur
 enhancement can auto-iterate (compile → count pages → recompile) for an exact
 gutter.
 
+## Home binding (imposition)
+
+Separate from the KDP interior (which a print house imposes for you), `bf impose`
+lets you print a book on a home printer and bind it by hand. It takes any PDF and
+lays its pages **two-up on landscape sheets** so that, printed double-sided and
+folded down the middle, the sheets read in order.
+
+- Pages stay portrait and are **scaled to fit** each half-sheet cell (minus a
+  safe margin), so the source trim size is irrelevant — a 6×9 interior and a 5×8
+  one both work.
+- Pages are grouped into **signatures** (default 4 sheets = 16 pages, settable
+  with `--signature`; `--single` makes one saddle-stitch booklet). The last
+  signature is padded with blanks to a multiple of 4. Within each signature the
+  standard booklet order (front `[hi, lo]`, back `[lo+1, hi-1]`, walking inward)
+  is emitted front,back,… for **duplex printing (flip on short edge)**.
+- Implemented with `pypdf` (added to the image via `apk add py3-pypdf`, in
+  keeping with `vendor/README.md`: Python deps come from `apk`, not vendored
+  wheels). No host install.
+- The imposed PDF is written **next to its input** (`docs/out/x-interior.pdf` →
+  `docs/out/x-signatures.pdf`); `run.sh` makes just that one directory writable.
+  Unlike the other subcommands, impose has no `<bookdir>/out` notion — it acts on
+  a single PDF wherever it lives.
+- pypdf writes merged page content and copied form XObjects uncompressed, so
+  before writing, impose re-deflates every unfiltered stream (lossless). Without
+  it the imposed file is several times the input's size; with it, it's about the
+  same.
+
+Fold/trim marks are intentionally omitted (pypdf has no vector-drawing API, and
+scaled pages carry no bleed to trim — fold at the obvious centre).
+
 ## Tooling & invocation
 
 - **Docker image:** `FROM pandoc/typst` + `python3` + `py3-yaml`. The `bf` CLI
@@ -177,6 +207,7 @@ gutter.
   - `bf print [bookdir] [--pages N] [--keep]`
   - `bf epub  [bookdir] [--no-check]`
   - `bf import <file.docx> [bookdir] [--no-split] [--force]`
+  - `bf impose <file.pdf> [--paper P] [--signature N] [--single] [-o NAME]`
 - **Host wrapper (`run.sh`):** builds the image if missing, then runs the
   container with the current directory mounted at `/work`.
 

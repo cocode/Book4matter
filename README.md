@@ -57,6 +57,39 @@ website), or a single chapter:
 — the in-book anchors point nowhere off-site — ready to style and drop into a
 web page. `html` and `html chapter` reuse the EPUB styling.
 
+### Print & bind at home (imposition)
+
+`impose` rearranges a PDF's pages **two-up into signatures** so you can print it
+on a home printer, fold the sheets, and bind the book by hand. A *signature* is
+a small stack of sheets folded together down the middle; several signatures are
+then stacked and sewn or glued into a codex.
+
+```bash
+./run.sh print docs/                                  # -> the interior PDF
+./run.sh impose docs/out/book4matter-interior.pdf     # -> docs/out/book4matter-signatures.pdf
+```
+
+The imposed PDF is written **next to its input** — so
+`docs/out/book4matter-interior.pdf` produces
+`docs/out/book4matter-signatures.pdf` — whether you run from the repo root or
+from inside the book. Then **print it double-sided, flipping on the *short*
+edge**, fold each signature at the centre, and stack and bind them.
+
+Options:
+
+- `--paper letter` (default) or `--paper a4` — the sheet you print on. Pages are
+  scaled to fit each half-sheet, so any trim size works.
+- `--signature N` — sheets per signature (default `4` — 4 sheets of paper, i.e.
+  16 pages). Each sheet folds to 4 pages.
+- `--single` — impose the whole book as one folded booklet (saddle-stitch),
+  best for thin books you staple through the fold.
+- `--margin INCHES` — safe margin inside each half-page (default `0.25`), keeping
+  content out of the printer's no-print zone and off the fold.
+- `-o NAME` — output filename (still written beside the input).
+
+`impose` takes *any* PDF, not just a book4matter interior. Its streams are
+Flate-compressed, so the imposed PDF stays about the size of the input.
+
 The first run builds the Docker image. After changing the template or CLI, force
 a rebuild:
 

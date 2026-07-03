@@ -45,6 +45,31 @@ if [[ "$cmd" == "import" ]]; then
   mounts=(-v "$PWD:/work:ro"
           -v "$PWD/${bd}chapters:/work/${bd}chapters"
           -v "$PWD/${bd}media:/work/${bd}media")
+elif [[ "$cmd" == "impose" ]]; then
+  # impose writes the imposed PDF into the SAME directory as its input, so that
+  # one directory must be writable while the rest of the tree stays read-only.
+  # (This is why `./run.sh impose docs/out/x-interior.pdf` lands the result in
+  # docs/out, not ./out.) The input is the first argument after the subcommand
+  # that is an existing file; --flags and their values are not files, so they're
+  # skipped.
+  input=""
+  for ((idx = 1; idx < ${#args[@]}; idx++)); do
+    a="${args[idx]}"
+    if [[ "$a" != -* && -f "$a" ]]; then input="$a"; break; fi
+  done
+  if [[ -z "$input" ]]; then
+    mounts=(-v "$PWD:/work:ro")            # let bf report the missing-input error
+  else
+    indir="$(cd "$(dirname "$input")" && pwd)"
+    if [[ "$indir" == "$PWD" ]]; then
+      mounts=(-v "$PWD:/work")             # input sits at the tree root
+    elif [[ "$indir" == "$PWD"/* ]]; then
+      # under the tree: overlay a writable mount at the same /work path
+      mounts=(-v "$PWD:/work:ro" -v "$indir:/work/${indir#"$PWD"/}")
+    else
+      mounts=(-v "$PWD:/work:ro" -v "$indir:$indir")   # input outside the tree
+    fi
+  fi
 else
   # Build commands (print/pdf/epub/html) only ever write to <book>/out.
   mkdir -p "$PWD/${bd}out"
@@ -55,20 +80,24 @@ fi
 # (e.g. a .docx in ~/Documents). The container can only see mounted paths, so
 # bind-mount the parent directory of any such file read-only at its real path,
 # letting bf read it. Files already under $PWD are covered by the /work mount.
-seen=":"
-for arg in "$@"; do
-  if [[ -f "$arg" ]]; then
-    dir="$(cd "$(dirname "$arg")" && pwd)"
-    case "$dir/" in
-      "$PWD"/*) ;;  # already visible under /work
-      *)
-        if [[ "$seen" != *":$dir:"* ]]; then
-          mounts+=(-v "$dir:$dir:ro")
-          seen="$seen$dir:"
-        fi
-        ;;
-    esac
-  fi
-done
+# (impose handled its own input above -- re-mounting it here as read-only would
+# clash with the writable mount, so skip it.)
+if [[ "$cmd" != "impose" ]]; then
+  seen=":"
+  for arg in "$@"; do
+    if [[ -f "$arg" ]]; then
+      dir="$(cd "$(dirname "$arg")" && pwd)"
+      case "$dir/" in
+        "$PWD"/*) ;;  # already visible under /work
+        *)
+          if [[ "$seen" != *":$dir:"* ]]; then
+            mounts+=(-v "$dir:$dir:ro")
+            seen="$seen$dir:"
+          fi
+          ;;
+      esac
+    fi
+  done
+fi
 
 exec docker run --rm "${mounts[@]}" -w /work "$IMAGE" "$@"
