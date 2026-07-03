@@ -1,6 +1,6 @@
 # Markdown -> KDP print-PDF pipeline. Everything lives in this image; nothing is
 # installed on the host.
-FROM pandoc/typst:latest
+FROM pandoc/typst:3.9.0.2@sha256:8b88646589ec8aa05afdca02dbe6849fa38f3235fb23559970ba82088a5d8f75
 
 # Python + PyYAML for the bf CLI; Liberation Sans (Helvetica-metric) for
 # headings; openjdk + unzip for the epubcheck validator; py3-pypdf for the
