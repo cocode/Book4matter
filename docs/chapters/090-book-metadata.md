@@ -7,12 +7,12 @@ empty copyright line.
 
 **`title`** --- The book's title; defaults to "Untitled". A `\n` in the value
 stacks the title across lines on the print title page --- `"The\nRotary\nWaltz"`
-sets three lines --- while everywhere else (PDF metadata, EPUB, running heads)
-the breaks collapse to spaces.
+sets three lines --- while everywhere else (PDF metadata, EPUB, HTML, running
+heads) the breaks collapse to spaces.
 
 **`subtitle`** --- A subtitle, set beneath the title on the title page and
-carried into the EPUB. Turn on `title-rule` (in `book_style.yaml`) to draw a rule
-between the two.
+carried into the digital outputs. Turn on `title-rule` (in `book_style.yaml`) to
+draw a rule between the two on the PDF title page.
 
 **`author`** (or **`authors`**) --- One name as a string, or several as a YAML
 list. Either key works. The author appears on the title page, in the PDF and
@@ -20,7 +20,7 @@ EPUB metadata, and in the "Also by" heading.
 
 ```
 author: "Thomas Hill"
-# --- or ---
+# Or:
 authors:
   - "Ada Lovelace"
   - "Charles Babbage"
@@ -45,17 +45,18 @@ credit, for instance: `"Cover photo courtesy of RJ Muna."`
 language for the PDF and the EPUB (`<dc:language>`) and drives hyphenation.
 Defaults to `en`.
 
-**`cover`** --- *EPUB only.* A path (relative to the book directory) to a cover
-image, embedded as the EPUB cover. Print ignores it --- KDP takes the print cover
-as a separate upload, so it never belongs in the interior PDF. The build stops if
-the file is missing.
+**`cover`** --- A path (relative to the book directory) to a cover image. The
+`pdf` command places it as the first page, `epub` embeds it as the EPUB cover,
+and the whole-book `html` output embeds it near the top of the page. `print`
+ignores it: KDP takes the print cover as a separate upload, so it never belongs
+in the interior PDF. Builds that use the cover stop if the file is missing.
 
 ### The "Also by" page
 
-Give an `also-by:` list and book4matter prints an "Also by *Author*" page in the
-front matter (print only); omit it and there is no such page. Each entry needs a
-`title` and may add a `cover` image, a `qr` image, and a `url`. A bare string is
-treated as a title-only entry.
+Give an `also-by:` list and book4matter adds an "Also by *Author*" page in the
+front matter of the PDF outputs; omit it and there is no such page. Each entry
+needs a `title` and may add a `cover` image, a `qr` image, and a `url`. A bare
+string is treated as a title-only entry.
 
 ```
 also-by:
@@ -63,7 +64,8 @@ also-by:
     cover: "media/htbd-cover.jpg"
     qr: "media/htbd-qr.png"
     url: "howtoteachballroomdancing.com"
-  - "An Earlier Work"        # title only
+  # Title only.
+  - "An Earlier Work"
 ```
 
 ### Listing chapters explicitly

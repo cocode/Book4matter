@@ -5,18 +5,21 @@ A book4matter book is just a folder. At minimum it holds two YAML files and a
 
 ```
 my-book/
-  book_metadata.yaml   # what the book is:  title, author, rights, language
-  book_style.yaml      # how it looks:      trim, margins, fonts
-  chapters/            # one Markdown file per chapter (or per part)
+  book_metadata.yaml
+  book_style.yaml
+  chapters/
     010-introduction.md
     020-first-steps.md
-  media/               # images, referenced from chapters as ../media/...
-  out/                 # build output lands here
+  media/
+  out/
 ```
 
 Only one of the two YAML files is strictly required --- book4matter reads both
 and merges them --- but keeping identity in `book_metadata.yaml` and appearance in
-`book_style.yaml` is the convention this manual follows.
+`book_style.yaml` is the convention this manual follows. The `chapters/`
+directory holds one Markdown file per chapter or part, `media/` holds images
+referenced from chapters as `../media/...`, and `out/` is where build output
+lands.
 
 ### Chapter order
 
@@ -30,16 +33,26 @@ files, in that order, are built.
 ### Building each format
 
 ```
-./run.sh print my-book/     # -> my-book/out/<title>-interior.pdf
-./run.sh epub  my-book/     # -> my-book/out/<title>.epub
-./run.sh html  my-book/     # -> my-book/out/<title>.html
+# For printing or KDP upload.
+./run.sh print my-book/
+# For sending someone a PDF.
+./run.sh pdf my-book/
+# For e-readers.
+./run.sh epub my-book/
+# For the web.
+./run.sh html my-book/
 ```
 
 Output always lands in the book's `out/` directory, named after the book's
-title. The PDF carries an `-interior` suffix, matching KDP's vocabulary: the
-**interior** and the **cover** are uploaded to KDP as two separate files.
-Book4matter produces the interior only, and your cover never appears in the print
-PDF. (For EPUB you *may* supply a `cover:` image; see the metadata reference.)
+title: `print` writes `<title>-interior.pdf`, `pdf` writes `<title>.pdf`, `epub`
+writes `<title>.epub`, and `html` writes `<title>.html`.
+
+Use `print` when you are printing a book or uploading an interior to KDP. It
+omits the cover and removes internal link annotations, because print platforms
+such as KDP expect the cover as a separate file and may reject hyperlinks inside
+an interior PDF. Use `pdf` when you will send someone a PDF. It can include the
+cover and keeps hyperlinks live for the table of contents, footnotes, and web
+links.
 
 ### The bundled example
 
@@ -47,5 +60,6 @@ The repository ships a tiny example book. Build it to confirm your setup works
 before pointing the tool at your own manuscript:
 
 ```
-./run.sh print example/     # -> example/out/the-pocket-pipeline-interior.pdf
+# Writes example/out/the-pocket-pipeline-interior.pdf.
+./run.sh print example/
 ```

@@ -9,7 +9,7 @@ level down, in `chapters/`, so they reference an image with a leading `../`:
 ![A frame from the Gaskell Ball](../media/gaskell.jpg)
 ```
 
-That one path works everywhere --- the print build, the EPUB, the HTML, and your
+That one path works everywhere --- print, digital PDF, EPUB, HTML, and your
 Markdown editor's preview --- because the build compiles from the book root and
 never rewrites your paths.
 
@@ -55,9 +55,10 @@ width once it clears the bottom edge.
 ```
 
 The wrap runs from the image to the end of its section --- that is, until the
-next heading at the same level or shallower. In print this is a true text wrap;
-in EPUB and HTML it is a CSS float, which modern e-readers honor and older ones
-quietly ignore (the image just becomes a normal block --- fine either way).
+next heading at the same level or shallower. In the PDF outputs this is a true
+text wrap; in EPUB and HTML it is a CSS float, which modern e-readers honor and
+older ones quietly ignore (the image just becomes a normal block --- fine either
+way).
 
 ### Scene breaks
 

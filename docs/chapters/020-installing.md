@@ -10,7 +10,8 @@ The wrapper script `run.sh` builds the image the first time you run it, then
 runs the tool with your current directory mounted inside the container:
 
 ```
-./run.sh print example/        # builds the image (once), then the example book
+# Builds the image once, then builds the example book.
+./run.sh print example/
 ```
 
 That first run takes a few seconds more, while the image is assembled. 

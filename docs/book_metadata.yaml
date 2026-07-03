@@ -7,15 +7,26 @@
 #
 # This file documents book4matter AND is a working book4matter book. From the
 # project root:
-#     ./run.sh print docs/     # build this manual as a 6x9 interior PDF
-#     ./run.sh epub  docs/     # ... or as an EPUB
-#     ./run.sh html  docs/     # ... or as one HTML page
+#     Build this manual as a 6x9 print interior PDF:
+#     ./run.sh print docs/
+#     Build it as a digital PDF with live links:
+#     ./run.sh pdf docs/
+#     Build it as an EPUB:
+#     ./run.sh epub docs/
+#     Build it as one HTML page:
+#     ./run.sh html docs/
 
 title: "Book4matter"
-subtitle: "Markdown to print, EPUB, and HTML"
-author: "Thomas Hill"          # a string, or a YAML list of names
-year: 2026                     # used as the EPUB date (<dc:date>)
-publisher: ""                  # shown on the copyright page when set
-rights: "© 2026 Thomas Hill."  # copyright line on the copyright page
-isbn: ""                       # copyright page + EPUB <dc:identifier> when set
-language: en                   # cataloguing attribute; also drives hyphenation
+subtitle: "Markdown to print, PDF, EPUB, and HTML"
+# A string, or a YAML list of names.
+author: "Thomas Hill"
+# Used as the EPUB date (<dc:date>).
+year: 2026
+# Shown on the copyright page when set.
+publisher: ""
+# Copyright line on the copyright page.
+rights: "© 2026 Thomas Hill."
+# Copyright page + EPUB <dc:identifier> when set.
+isbn: ""
+# Cataloguing attribute; also drives hyphenation.
+language: en

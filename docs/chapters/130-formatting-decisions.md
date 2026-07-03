@@ -14,8 +14,8 @@ the default needs no font setup and nothing is fetched from the network.
 ### Paragraph indents
 
 Paragraphs are set off by a first-line indent rather than by blank space --- the
-book convention. In print, `indent:` in `book_style.yaml` chooses among three
-styles:
+book convention. In the PDF outputs, `indent:` in `book_style.yaml` chooses
+among three styles:
 
 - `all` (the default) --- indent *every* paragraph, including the one that opens a
   chapter or section. The house style: no flush-left openers.
@@ -26,7 +26,7 @@ styles:
   them (block style).
 
 EPUB and HTML always use the `standard` look --- readers expect it on screen and
-can override it anyway --- so `indent:` is a print setting.
+can override it anyway --- so `indent:` is a PDF setting.
 
 ### Headings
 
@@ -43,7 +43,7 @@ begins at the first part. Display pages --- the title, copyright, and "Also by"
 pages, and every part divider --- show no folio, though they still count, so the
 numbering downstream stays correct. Running heads are off by default; when on,
 they appear only on ordinary body pages (never where a part or chapter opens),
-and only in print.
+and only in the PDF outputs.
 
 ### Parts and chapters
 
@@ -67,8 +67,11 @@ A captioned image becomes a centered figure; figures are *not* auto-numbered
 than by number. How tables, quotes, footnotes, and links are set is described
 where you write them, in the *Tables, Quotes, Footnotes, and Links* chapter.
 
-### Links in print
+### Links in PDF and print
 
-A printed link cannot be clicked, so an external web link prints its destination
-in parentheses after the text, and email addresses are kept whole so they never
-break at a hyphen. On screen --- in EPUB and HTML --- links stay live and bare.
+The `pdf` command is for screen reading, so hyperlinks stay live there: the
+table of contents, footnotes, cross-references, and external links are all
+clickable. The `print` command is for physical books and KDP interiors, so
+internal link annotations are removed. External web links print their destination
+in parentheses after the visible text, and email addresses are kept whole so they
+never break at a hyphen. EPUB and HTML links stay live and bare.

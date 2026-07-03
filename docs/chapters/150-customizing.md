@@ -29,16 +29,16 @@ heading-font: "Cormorant"
 When a `fonts/` folder is present, book4matter points Typst at it automatically,
 so the fonts travel with the book project --- no system install, no image
 rebuild. System and bundled fonts are still searched, so a missing `fonts/`
-folder is fine. The print build embeds whatever is used, so the font's license
+folder is fine. The PDF builds embed whatever is used, so the font's license
 must permit PDF embedding.
 
 True to this project's grain, prefer a real, licensed book face that you keep
 with the project over pulling one from a web font service. It keeps the build
 self-contained and the typography under your control.
 
-### Fonts in EPUB
+### Fonts in EPUB and HTML
 
-EPUB deliberately does *not* embed your custom fonts. `epub.css` names only the
-generic `serif` and `sans-serif` families and lets the reader's device choose ---
-which is what readers expect, and what lets them override fonts anyway. A custom
-`font:` therefore affects print only.
+EPUB and HTML deliberately do *not* embed your custom fonts. `epub.css` names
+only the generic `serif` and `sans-serif` families and lets the reader's device
+choose --- which is what readers expect, and what lets them override fonts
+anyway. A custom `font:` therefore affects the two PDF outputs only.

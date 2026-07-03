@@ -7,8 +7,10 @@
 # that produced it.
 #
 # Usage:
-#   docs/build.sh                 # build print + epub + html
-#   docs/build.sh print           # build only the given format(s)
+#   Build print + epub + html:
+#     docs/build.sh
+#   Build only the given format(s):
+#     docs/build.sh print
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

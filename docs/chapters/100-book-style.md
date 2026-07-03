@@ -44,56 +44,60 @@ Customizing chapter.
 **`font-size`** --- Body text size, for example `11pt`. A bare number is read as
 points (`11` means `11pt`). Defaults to `11pt`.
 
-**`indent`** --- *Print only.* How paragraphs are indented. `all` (the default)
-indents every paragraph's first line, openers included; `standard` leaves the
-first paragraph after a heading flush and indents the rest (the trade-book
-convention, and what EPUB and HTML already do); `none` drops indents entirely and
-tells paragraphs apart by the space between them. Defaults to `all`.
+**`indent`** --- *PDF outputs only.* How paragraphs are indented. `all` (the
+default) indents every paragraph's first line, openers included; `standard`
+leaves the first paragraph after a heading flush and indents the rest (the
+trade-book convention, and what EPUB and HTML already do); `none` drops indents
+entirely and tells paragraphs apart by the space between them. Defaults to `all`.
 
-**`toc`** --- Whether to print the Contents page. Defaults to `true`. The
-Contents lists parts and chapters; a front-matter chapter shows its roman folio.
+**`toc`** --- Whether to include the Contents page in the PDF outputs. Defaults
+to `true`. The Contents lists parts and chapters; a front-matter chapter shows
+its roman folio. EPUB and whole-book HTML always get a generated navigation
+structure from Pandoc.
 
 **`toc-depth`** --- How many heading levels the Contents includes. `2` (the
 default) lists parts and chapters; `3` also lists topics (level-3 `###`
-headings), set smaller and nested under their chapter. Applies to print, EPUB,
-and HTML.
+headings), set smaller and nested under their chapter. Applies to print, digital
+PDF, EPUB, and HTML.
 
-**`running-heads`** --- *Print only.* When `true`, body pages carry a small-caps
-running head: the book title on left-hand (verso) pages and the current chapter
-on right-hand (recto) pages. It is suppressed in the front matter and on any page
-where a part or chapter opens. Defaults to `false`. EPUB and HTML ignore it ---
-those readers paginate themselves.
+**`running-heads`** --- *PDF outputs only.* When `true`, body pages carry a
+small-caps running head: the book title on left-hand (verso) pages and the
+current chapter on right-hand (recto) pages. It is suppressed in the front matter
+and on any page where a part or chapter opens. Defaults to `false`. EPUB and
+HTML ignore it --- those readers paginate themselves.
 
 **`title-rule`** --- When `true`, draw a horizontal rule between the title and
 subtitle on the title page. Defaults to `false`.
 
-**`chapter-style`** --- *Print only.* The chapter opener's layout. `centered`
-(the default) centers a bare chapter numeral over a short rule with the title
-centered beneath --- which carries a wrapped title gracefully. `left` instead
-prints a "CHAPTER N" label with the title flush left. Defaults to `centered`.
+**`chapter-style`** --- *PDF outputs only.* The chapter opener's layout.
+`centered` (the default) centers a bare chapter numeral over a short rule with
+the title centered beneath --- which carries a wrapped title gracefully. `left`
+instead prints a "CHAPTER N" label with the title flush left. Defaults to
+`centered`.
 
-**`part-style`** --- *Print only.* The part divider's layout. `classic` (the
-default) prints an all-caps label and arabic number ("PART 1") above the title in
-bold capitals, sitting a third of the way down the page. `fancy` instead sets the
-divider in the body serif as a small letterspaced label, a large Roman numeral, a
-short rule, and the title in title-case --- the literary look of a trade book's
-section openers. Any text written beneath the part heading in its chapter file
-prints as a centered italic blurb on the divider itself. Defaults to `classic`.
+**`part-style`** --- *PDF outputs only.* The part divider's layout. `classic`
+(the default) prints an all-caps label and arabic number ("PART 1") above the
+title in bold capitals, sitting a third of the way down the page. `fancy`
+instead sets the divider in the body serif as a small letterspaced label, a large
+Roman numeral, a short rule, and the title in title-case --- the literary look of
+a trade book's section openers. Any text written beneath the part heading in its
+chapter file prints as a centered italic blurb on the divider itself. Defaults to
+`classic`.
 
 **`part-label`** --- The word for the top-level division, replacing "Part"
-everywhere it is auto-generated: the print divider and table of contents (set in
+everywhere it is auto-generated: the PDF divider and table of contents (set in
 capitals there, so `SECTION TWO · ...`), and the EPUB and HTML labels. Defaults
 to `Part`. Set it to `Section`, `Book`, `Volume`, or anything else. It does not
 touch wording you write yourself in a heading or in body text.
 
-**`parts-recto`** --- *Print only.* When `true`, every part divider begins on a
-recto (the right-hand, odd-numbered page); a blank page is inserted before it when
-the previous page would otherwise leave it on a verso. The blank is counted and
-may carry a folio. Defaults to `false`. EPUB and HTML have no fixed page sides, so
-they ignore it.
+**`parts-recto`** --- *PDF outputs only.* When `true`, every part divider begins
+on a recto (the right-hand, odd-numbered page); a blank page is inserted before
+it when the previous page would otherwise leave it on a verso. The blank is
+counted and may carry a folio. Defaults to `false`. EPUB and HTML have no fixed
+page sides, so they ignore it.
 
-**`chapters-recto`** --- *Print only.* The same for chapters: when `true`, each
-chapter opens on a recto page. Defaults to `false`.
+**`chapters-recto`** --- *PDF outputs only.* The same for chapters: when `true`,
+each chapter opens on a recto page. Defaults to `false`.
 
 > **Not supported:** a `line-height:` key appears in some older example files,
 > but the tool does not read it --- body leading is fixed in the template. Leave

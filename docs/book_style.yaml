@@ -7,17 +7,26 @@
 # These docs deliberately use only fonts bundled in the Docker image, so they
 # build with no font setup at all.
 
-trim: 6x9                       # KDP US trade paperback (or a {width, height} map)
-margins:                        # inches; omit to let --pages pick a KDP-safe gutter
-  inside: 0.875                 # binding side -- wider; KDP scales this with page count
+# KDP US trade paperback, or a {width, height} map.
+trim: 6x9
+# Inches; omit to let --pages pick a KDP-safe gutter.
+margins:
+  # Binding side -- wider; KDP scales this with page count.
+  inside: 0.875
   outside: 0.625
   top: 0.75
   bottom: 0.75
 
-font: "Libertinus Serif"        # body face; bundled in Typst, no setup needed
-heading-font: "Liberation Sans" # parts, chapters, headings; bundled in the image
-font-size: 11pt                 # body size
+# Body face; bundled in Typst, no setup needed.
+font: "Libertinus Serif"
+# Parts, chapters, headings; bundled in the image.
+heading-font: "Liberation Sans"
+# Body size.
+font-size: 11pt
 
-toc: true                       # generate the Contents page
-running-heads: true             # book title (verso) / chapter (recto); print only
-title-rule: true                # rule between title and subtitle on the title page
+# Generate the Contents page.
+toc: true
+# Book title (verso) / chapter (recto); PDF outputs only.
+running-heads: true
+# Rule between title and subtitle on the title page.
+title-rule: true

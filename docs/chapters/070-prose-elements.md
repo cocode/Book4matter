@@ -6,10 +6,10 @@ syntax beyond standard Markdown. Book4matter sets each in book style.
 ### Tables
 
 Write a normal Markdown pipe table and align a column with colons in the divider
-row. In print it is set in book (booktabs) style: a rule above, a rule under the
-header, and a rule below --- no vertical lines, no shaded cells --- with the
-header in bold and figures set in tabular (fixed-width) columns so digits line
-up.
+row. In the PDF outputs it is set in book (booktabs) style: a rule above, a rule
+under the header, and a rule below --- no vertical lines, no shaded cells ---
+with the header in bold and figures set in tabular (fixed-width) columns so
+digits line up.
 
 ```
 | Step | Count | Beats |
@@ -29,9 +29,11 @@ smaller and in italic, indented from both margins with air above and below:
 
 ### Footnotes
 
-Markdown footnotes work as usual. In print they fall to the foot of the page; in
-EPUB and HTML they collect at the end of the chapter, linked from a superscript
-marker.
+Markdown footnotes work as usual. In the two PDF outputs they fall to the foot
+of the page; in EPUB and HTML they collect at the end of the chapter, linked
+from a superscript marker. The digital `pdf` output keeps its footnote markers
+clickable; the `print` output does not, because KDP rejects internal hyperlinks
+in print interiors.
 
 ```
 Practice the rise slowly at first.[^rise]
@@ -41,15 +43,17 @@ Practice the rise slowly at first.[^rise]
 
 ### Links
 
-Links survive to every format, but print and screen treat them differently,
-because a printed link cannot be clicked.
+Links survive to every format, but the target decides whether they are clickable.
+Use the digital `pdf`, EPUB, and HTML outputs when links should work on screen;
+use `print` when the file is going to a printer or to KDP.
 
-- **In EPUB and HTML** a link stays live and shows only its text.
-- **In print** an external web link prints its destination after the text, so a
-  reader can still find it --- "the project site (https://example.com)". A bare
-  autolink shows its URL once. Email addresses are kept whole and never broken at
-  a hyphen across a line, and internal links (the Contents, footnote markers) are
-  left untouched.
+- **In digital PDF, EPUB, and HTML** links stay live. That includes the table of
+  contents, footnotes, cross-references, and external web links.
+- **In print** internal hyperlinks are removed so the interior has no clickable
+  annotations. External web links print the destination after the visible text,
+  so `[CLICK HERE](https://www.example.com)` becomes `CLICK HERE
+  (https://www.example.com)`. A bare autolink shows its URL once. Email addresses
+  are kept whole and never broken at a hyphen across a line.
 
 ### Punctuation
 

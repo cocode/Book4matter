@@ -9,9 +9,9 @@ is the path for shaping *your* house style, not for per-book themes.
 
 ### The files
 
-- **`templates/book.typ`** --- the print template. It holds the page geometry,
+- **`templates/book.typ`** --- the PDF page template. It holds the page geometry,
   the title / copyright / "Also by" / contents pages, and the show rules that
-  style every heading level. Most print-appearance changes happen here: heading
+  style every heading level. Most PDF-appearance changes happen here: heading
   sizes and spacing, the title-page layout, the running-head format, the table
   and block-quote styling.
 - **`templates/epub.css`** --- the styling for EPUB *and* the HTML outputs. Edit
@@ -52,4 +52,4 @@ semantic HTML --- a `#TOC` nav, one `section` per part and chapter, `.part-label
 
 This manual does exactly that: `docs/build.sh` copies its `book4matter-web.css`
 into `out/book_style.css`, giving the site its own look without disturbing the
-templates that the print and EPUB outputs share.
+templates that the PDF, EPUB, and HTML outputs share.
