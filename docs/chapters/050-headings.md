@@ -31,7 +31,9 @@ where an introduction or preface belongs:
 ```
 
 A book with no parts at all is simpler still: every `##` is a chapter and arabic
-page numbers run from page one.
+page numbers run from page one. And a book that writes `#` for its chapters ---
+with no parts above them --- is handled too; see the Novels and Flat Books
+chapter for that and for numbered, title-less chapters.
 
 ### Two small switches
 

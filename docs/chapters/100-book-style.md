@@ -51,9 +51,17 @@ trade-book convention, and what EPUB and HTML already do); `none` drops indents
 entirely and tells paragraphs apart by the space between them. Defaults to `all`.
 
 **`toc`** --- Whether to include the Contents page in the PDF outputs. Defaults
-to `true`. The Contents lists parts and chapters; a front-matter chapter shows
-its roman folio. EPUB and whole-book HTML always get a generated navigation
-structure from Pandoc.
+to `true` for a book that has any titles, and to `false` for a wholly un-titled
+novel (nothing to list). Set it explicitly to force the issue either way. The
+Contents lists parts and chapters; a front-matter chapter shows its roman folio.
+EPUB and whole-book HTML always get a generated navigation structure from Pandoc.
+
+**`no-parts`** --- *PDF outputs only.* When `true`, treat top-level `#` headings
+as chapters rather than parts, shifting every heading down one level (`#` →
+chapter, `##` → section, ...). Use it for a book that has chapters but no parts
+and writes `#` for the chapter. Defaults to `false`, though a book that uses no
+`##` anywhere is read this way regardless (see the Novels and Flat Books chapter).
+The `--no-parts` command-line flag does the same thing.
 
 **`toc-depth`** --- How many heading levels the Contents includes. `2` (the
 default) lists parts and chapters; `3` also lists topics (level-3 `###`

@@ -30,6 +30,10 @@ two existing ones without renumbering. If you would rather order the files by
 hand, list them under a `chapters:` key in `book_metadata.yaml`; then only those
 files, in that order, are built.
 
+Plain `.txt` files count as chapters too, and a chapter file need not carry a
+heading at all: a novel can be nothing but numbered text files. The Novels and
+Flat Books chapter covers that low-structure path.
+
 ### Building each format
 
 ```

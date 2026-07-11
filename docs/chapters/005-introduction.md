@@ -1,6 +1,6 @@
 ## Introduction {.unnumbered}
 
-*Book4matter* turns a folder of Markdown into four outputs: a print-ready
+*Book4matter* turns a folder of text formatted with Markdown into four outputs: a print-ready
 interior PDF for Amazon Kindle Direct Publishing (KDP), a digital PDF to send to
 readers, an EPUB for e-readers, and a standalone HTML page for the web. You
 write once, in plain Markdown, and the same source produces all four.

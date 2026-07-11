@@ -16,7 +16,7 @@ current directory.
 ### print
 
 ```
-./run.sh print [bookdir] [--pages N] [--keep] [--build-id ID]
+./run.sh print [bookdir] [--pages N] [--keep] [--no-parts] [--build-id ID]
 ```
 
 Builds the print interior PDF to `bookdir/out/<title>-interior.pdf`. Use this
@@ -34,13 +34,15 @@ destination, as in `CLICK HERE (https://www.example.com)`.
 - `--keep` --- keep the intermediate Typst files (`_body.typ`, `_meta.typ`,
   `book.typ`, `main.typ`) in `out/` instead of deleting them. Handy when you want
   to read the generated Typst.
+- `--no-parts` --- treat `#` headings as chapters, not parts, shifting every
+  heading down one level. See the Novels and Flat Books chapter.
 - `--build-id ID` --- a printing identifier, printed as "Printing: *ID*" on the
   copyright page.
 
 ### pdf
 
 ```
-./run.sh pdf [bookdir] [--pages N] [--keep] [--build-id ID]
+./run.sh pdf [bookdir] [--pages N] [--keep] [--no-parts] [--build-id ID]
 ```
 
 Builds a digital PDF to `bookdir/out/<title>.pdf`. Use this when you will send
@@ -52,6 +54,7 @@ includes it as the first page.
 - `--pages N` --- the estimated final page count, using the same gutter logic as
   `print`.
 - `--keep` --- keep the intermediate Typst files in `out/`.
+- `--no-parts` --- treat `#` headings as chapters, not parts (as for `print`).
 - `--build-id ID` --- a printing identifier, printed as "Printing: *ID*" on the
   copyright page.
 
