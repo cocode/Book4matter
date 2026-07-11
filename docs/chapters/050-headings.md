@@ -1,4 +1,4 @@
-## Headings: Parts, Chapters, and Front Matter
+## Headings
 
 Markdown heading levels are how you give a book its structure. Book4matter reads
 them as a hierarchy and supplies the "PART" and "CHAPTER" labels, the page
