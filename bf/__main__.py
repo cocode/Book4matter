@@ -278,14 +278,137 @@ def resolve_chapters(bookdir, cfg):
     chdir = bookdir / "chapters"
     if not chdir.is_dir():
         die(f"no chapters/ directory and no 'chapters:' list in book.yaml ({bookdir})")
-    # No explicit list -> include every chapters/*.md, in natural filename order.
-    return sorted(chdir.glob("*.md"), key=_natural_key)
+    # No explicit list -> include every chapters/*.md and *.txt, in natural
+    # filename order. Plain .txt lets a novelist drop in text files with no
+    # markup at all; pandoc reads them as markdown either way (blank-line
+    # paragraphs, em dashes, and `* * *` scene breaks all work).
+    return sorted([*chdir.glob("*.md"), *chdir.glob("*.txt")], key=_natural_key)
+
+
+# -------------------------------------------------- novel / no-parts chapters
+
+# An ATX heading: 1-6 '#'s then either whitespace + a title, or nothing. The
+# "nothing" case (a bare `##`) is an EMPTY heading, which pandoc accepts and we
+# emit for auto-numbered, title-less chapters.
+_ATX_RE = re.compile(r"^(#{1,6})(?:[ \t]+(.*\S))?[ \t]*$")
+
+
+def _scan_levels(text):
+    """Fence-aware set of ATX heading levels present in one chapter's markdown.
+    A `#` inside a fenced code block is never counted."""
+    levels, in_fence = set(), False
+    for line in text.splitlines():
+        if _FENCE_RE.match(line):
+            in_fence = not in_fence
+            continue
+        if not in_fence:
+            m = _ATX_RE.match(line)
+            if m:
+                levels.add(len(m.group(1)))
+    return levels
+
+
+def _demote_md(text, by=1, cap=6):
+    """Add `by` levels to every ATX heading (fence-aware), capped at `cap`.
+
+    no-parts mode uses this so an author who wrote `#`=chapter, `##`=section
+    gets chapters and sections rather than parts and chapters: the whole
+    hierarchy shifts down one step. The title and any `{.attr}` block survive."""
+    out, in_fence = [], False
+    for line in text.splitlines():
+        if _FENCE_RE.match(line):
+            in_fence = not in_fence
+        elif not in_fence:
+            m = _ATX_RE.match(line)
+            if m:
+                lvl = min(len(m.group(1)) + by, cap)
+                line = "#" * lvl + line[len(m.group(1)):]
+        out.append(line)
+    return "\n".join(out)
+
+
+def _mark_first_heading(text, cls):
+    """Tag the first heading (fence-aware) with `{.cls}`, merging with any
+    existing attribute block; return the rewritten text."""
+    lines, in_fence = text.splitlines(), False
+    for i, line in enumerate(lines):
+        if _FENCE_RE.match(line):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+        if _ATX_RE.match(line):
+            s = line.rstrip()
+            lines[i] = (s[:-1].rstrip() + " ." + cls + "}") if s.endswith("}") \
+                else (s + " {." + cls + "}")
+            break
+    return "\n".join(lines)
+
+
+def preprocess_chapters(chapters, tmpdir, force_no_parts=False, toc=None,
+                        running_heads=False):
+    """Rewrite chapter files for novel / no-parts builds, into `tmpdir`.
+
+    `toc` is the book's `toc:` setting (True/False, or None to auto-decide);
+    `running_heads` is its `running-heads:` setting. Returns
+    (paths, show_toc, no_parts):
+      * paths     -- rewritten files, in order, to hand to pandoc;
+      * show_toc  -- whether a contents page should be produced (a wholly
+                     un-titled novel needs none, so auto-off there);
+      * no_parts  -- whether parts were collapsed to chapters.
+
+    A book with no `##` anywhere -- or one built with --no-parts / `no-parts:
+    true` -- is a *flat* book: `#` means chapter (there is no such thing as a
+    book with parts but no chapters), so every heading is demoted one level. A
+    file with no heading becomes an auto-numbered, title-less chapter. In a flat
+    book that mixes titled and un-titled files, a titled file is a named section
+    (Introduction, Afterword) -- shown with its title but skipped by the chapter
+    count -- while the un-titled files carry the numbering. Empty files are
+    dropped. Originals are never modified; every rewrite lands in `tmpdir`."""
+    infos = [(f, f.read_text()) for f in chapters]
+    # Drop empty / whitespace-only files: one would otherwise become a blank
+    # numbered chapter and consume a number.
+    infos = [(f, text, _scan_levels(text)) for (f, text) in infos if text.strip()]
+    all_levels = set().union(*(lv for (_, _, lv) in infos)) if infos else set()
+    no_parts = force_no_parts or (2 not in all_levels)
+
+    # A "title" is a chapter-level heading: level 1 in a flat book; a part (1) or
+    # a chapter (2) in a book that keeps parts.
+    def titled(levels):
+        return 1 in levels or (not no_parts and 2 in levels)
+
+    flags = [titled(lv) for (_, _, lv) in infos]
+    any_untitled = not all(flags) if flags else False
+    has_titles = any(flags)
+    show_toc = has_titles if toc is None else bool(toc)
+    # An auto-numbered chapter gets a spelled-out "Chapter N" heading -- rather
+    # than the bare centered numeral -- when something will read its title: a
+    # contents page that lists it, or a running head that names it. With neither,
+    # the empty heading yields the elegant numeral-over-rule opener.
+    labeled = show_toc or running_heads
+
+    paths, chap_no = [], 0
+    for idx, ((f, text, _), is_titled) in enumerate(zip(infos, flags)):
+        body = _demote_md(text) if no_parts else text
+        if not is_titled:
+            chap_no += 1
+            # A labeled chapter is marked unnumbered so the template shows the
+            # baked "Chapter N" as-is instead of adding a second number.
+            body = (f"## Chapter {chap_no} {{.unnumbered}}\n\n" if labeled
+                    else "##\n\n") + body.lstrip("\n")
+        elif no_parts and any_untitled:
+            # A titled file among un-titled ones: a named, un-numbered section.
+            body = _mark_first_heading(body, "unnumbered")
+        p = tmpdir / f"{idx:03d}-{f.name}"
+        p.write_text(body)
+        paths.append(p)
+    return paths, show_toc, no_parts
 
 
 # ---------------------------------------------------------------------- build
 
 def build_print(bookdir, pages=None, keep=False, build_id=None, links="print",
-                include_cover=False):
+                include_cover=False, no_parts=False):
     """Build a PDF from a book directory.
 
     links="print" (the `print` target) drops internal-link annotations so the
@@ -310,23 +433,42 @@ def build_print(bookdir, pages=None, keep=False, build_id=None, links="print",
     if cover and not (bookdir / cover).resolve().exists():
         die(f"cover image not found: {(bookdir / cover).resolve()}")
 
-    shutil.copy(TEMPLATES / "book.typ", out / "book.typ")
-    (out / "_meta.typ").write_text(
-        render_meta(cfg, pages, build_id=build_id, links=links, cover=cover))
-    # parts.lua reads BF_PARTS_RECTO so it can break to the odd page before the
-    # front-matter→arabic reset (see its Pandoc filter); an env var is the
-    # simplest way to pass a config flag into a lua filter.
-    env = {**os.environ, "BF_PARTS_RECTO": "1" if cfg.get("parts-recto") else "0"}
-    run(["pandoc", *[str(c) for c in chapters],
-         "-f", "markdown", "-t", "typst", "--wrap=preserve",
-         # wrap.lua first so it packages its body before parts.lua starts
-         # inserting raw `#pagebreak()` blocks between sibling headings; if
-         # the order were reversed, a pagebreak would land inside a wrap
-         # body and typst rejects pagebreaks inside content blocks.
-         f"--lua-filter={TEMPLATES / 'wrap.lua'}",
-         f"--lua-filter={TEMPLATES / 'parts.lua'}",
-         "-o", str(out / "_body.typ")],
-        env=env)
+    # Rewrite the chapters for novel / no-parts builds (auto-numbered title-less
+    # chapters, heading demotion) into a scratch dir. Originals stay untouched;
+    # image links resolve the same, since print images resolve from out/ via
+    # typst --root regardless of where the source markdown sits.
+    force_no_parts = no_parts or bool(cfg.get("no-parts", False))
+    tmpdir = Path(tempfile.mkdtemp(prefix="bf_chapters_"))
+    try:
+        proc, show_toc, _ = preprocess_chapters(
+            chapters, tmpdir, force_no_parts=force_no_parts, toc=cfg.get("toc"),
+            running_heads=bool(cfg.get("running-heads", False)))
+        if not proc:
+            die("no chapter content found (all chapter files are empty)")
+        # A wholly un-titled novel needs no contents; preprocess decides (and
+        # honours an explicit toc: in the book). Feed the result back so
+        # render_meta emits the matching flag.
+        cfg["toc"] = show_toc
+
+        shutil.copy(TEMPLATES / "book.typ", out / "book.typ")
+        (out / "_meta.typ").write_text(
+            render_meta(cfg, pages, build_id=build_id, links=links, cover=cover))
+        # parts.lua reads BF_PARTS_RECTO so it can break to the odd page before
+        # the front-matter→arabic reset (see its Pandoc filter); an env var is
+        # the simplest way to pass a config flag into a lua filter.
+        env = {**os.environ, "BF_PARTS_RECTO": "1" if cfg.get("parts-recto") else "0"}
+        run(["pandoc", *[str(c) for c in proc],
+             "-f", "markdown", "-t", "typst", "--wrap=preserve",
+             # wrap.lua first so it packages its body before parts.lua starts
+             # inserting raw `#pagebreak()` blocks between sibling headings; if
+             # the order were reversed, a pagebreak would land inside a wrap
+             # body and typst rejects pagebreaks inside content blocks.
+             f"--lua-filter={TEMPLATES / 'wrap.lua'}",
+             f"--lua-filter={TEMPLATES / 'parts.lua'}",
+             "-o", str(out / "_body.typ")],
+            env=env)
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
     body_path = out / "_body.typ"
     body_path.write_text(BODY_PRELUDE + body_path.read_text())
     (out / "main.typ").write_text(MAIN_TYP)
@@ -891,6 +1033,9 @@ def main(argv=None):
                    help="estimated page count, to pick a KDP-appropriate gutter")
     b.add_argument("--keep", action="store_true",
                    help="keep intermediate .typ files in out/")
+    b.add_argument("--no-parts", action="store_true",
+                   help="treat top-level (#) headings as chapters, not parts "
+                        "(shifts every heading down one level)")
     b.add_argument("--build-id", default=None,
                    help="printing identifier (e.g. git short hash) shown on copyright page")
 
@@ -903,6 +1048,9 @@ def main(argv=None):
                    help="estimated page count, to pick a KDP-appropriate gutter")
     d.add_argument("--keep", action="store_true",
                    help="keep intermediate .typ files in out/")
+    d.add_argument("--no-parts", action="store_true",
+                   help="treat top-level (#) headings as chapters, not parts "
+                        "(shifts every heading down one level)")
     d.add_argument("--build-id", default=None,
                    help="printing identifier (e.g. git short hash) shown on copyright page")
 
@@ -955,10 +1103,12 @@ def main(argv=None):
     args = p.parse_args(argv)
     if args.cmd == "print":
         build_print(Path(args.bookdir), pages=args.pages, keep=args.keep,
-                    build_id=args.build_id, links="print", include_cover=False)
+                    build_id=args.build_id, links="print", include_cover=False,
+                    no_parts=args.no_parts)
     elif args.cmd == "pdf":
         build_print(Path(args.bookdir), pages=args.pages, keep=args.keep,
-                    build_id=args.build_id, links="live", include_cover=True)
+                    build_id=args.build_id, links="live", include_cover=True,
+                    no_parts=args.no_parts)
     elif args.cmd == "epub":
         build_epub(Path(args.bookdir), check=args.check, build_id=args.build_id)
     elif args.cmd == "html":

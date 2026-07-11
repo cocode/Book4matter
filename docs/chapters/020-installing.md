@@ -33,7 +33,7 @@ docker build -t book4matter .
 
 Your book's own files --- the Markdown, the YAML, the images --- are *not* baked
 in; they are read fresh from disk on every build, so editing a chapter never
-needs a rebuild.
+needs a docker image rebuild.
 
 ### Nothing touches your host
 

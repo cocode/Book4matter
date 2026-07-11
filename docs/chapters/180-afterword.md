@@ -1,25 +1,28 @@
 # Afterword {.section}
 
-## Origins
+### Origins
 
 Book4matter began due to frustration with Microsoft Word. I wanted to not have to worry about formatting
-while I was writing. And writing in Word meant that version control really wasn't an option.
+while I was writing, and not worry about how that format would get translated when formattig as a pdf for printing. 
+
+Another issue was writing in Word meant that version control really wasn't an option.
 
 Book4matter allows you to write once, in plain text, and publish to multiple formats.
 
+### Goals
 
-## Goals
+Book4matter makes writing my books easier. I hope it will do the same for you. Let us know, via github, about any issues you run into. As with many one-person projects, this project does what I need it to do. Suggestion for how to 
+make it work for you, too, are welcome.
 
-Book4matter makes writing my books easier. I hope it will do the same for you. Let us know, via github, about any issues you run into.
+### Dependencies
 
-## Dependencies
+This project builds on other project, most notably
 
-The heavy lifting for the project is done by two projects --- [Pandoc](https://pandoc.org),
+* [Pandoc](https://pandoc.org),
 which reads more document formats than anyone reasonably should, and
-[Typst](https://typst.app), which makes fine typesetting programmable without a
-LaTeX-shaped learning cliff. Book4matter is mostly a thin, opinionated layer that
-aims them at the narrow job of building a book.
+* [Typst](https://typst.app), which makes fine typesetting programmable without a
+LaTeX-shaped learning cliff. 
+* We also use epubcheck to validate the output of EPUB generation.
 
-We also use epubcheck to validate the output of EPUB generation.
 
 

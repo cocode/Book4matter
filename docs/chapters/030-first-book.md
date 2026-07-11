@@ -30,9 +30,14 @@ two existing ones without renumbering. If you would rather order the files by
 hand, list them under a `chapters:` key in `book_metadata.yaml`; then only those
 files, in that order, are built.
 
-Plain `.txt` files count as chapters too, and a chapter file need not carry a
-heading at all: a novel can be nothing but numbered text files. The Novels and
-Flat Books chapter covers that low-structure path.
+If you don't need chatper titles, you can just put one chapter per file, and Book4matter will
+assume each file is a chapter and number them. You can still put title on some chapters, like
+"# Introduction", "# Afterword".
+
+The Novels and Flat Books chapter covers that low-structure path.
+
+Plain `.txt` files can be used, too. (Actually, Book4matter just treats them like markdown. This
+could cause problems, if you have markdown like markup in your plain text files.).
 
 ### Building each format
 
@@ -58,12 +63,16 @@ an interior PDF. Use `pdf` when you will send someone a PDF. It can include the
 cover and keeps hyperlinks live for the table of contents, footnotes, and web
 links.
 
-### The bundled example
+### The bundled examples
 
-The repository ships a tiny example book. Build it to confirm your setup works
+The repository ships with several examples. There is a tiny example book. Build it to confirm your setup works
 before pointing the tool at your own manuscript:
 
 ```
 # Writes example/out/the-pocket-pipeline-interior.pdf.
 ./run.sh print example/
 ```
+
+You can also look at the ./novel example, which shows simplified formatting.
+
+And you can also look at our documentation, in ./docs, which is also a Book4matter project.
