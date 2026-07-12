@@ -30,7 +30,7 @@ two existing ones without renumbering. If you would rather order the files by
 hand, list them under a `chapters:` key in `book_metadata.yaml`; then only those
 files, in that order, are built.
 
-If you don't need chatper titles, you can just put one chapter per file, and Book4matter will
+If you don't need chapter titles, you can just put one chapter per file, and Book4matter will
 assume each file is a chapter and number them. You can still put title on some chapters, like
 "# Introduction", "# Afterword".
 
@@ -65,7 +65,15 @@ links.
 
 ### The bundled examples
 
-The repository ships with several examples. There is a tiny example book. Build it to confirm your setup works
+The repository ships with several examples. 
+
+* example
+* novel
+* docs
+
+#### Example
+
+There is a tiny example book. Build it to confirm your setup works
 before pointing the tool at your own manuscript:
 
 ```
@@ -73,6 +81,10 @@ before pointing the tool at your own manuscript:
 ./run.sh print example/
 ```
 
+#### Novel
+
 You can also look at the ./novel example, which shows simplified formatting.
+
+#### Docs
 
 And you can also look at our documentation, in ./docs, which is also a Book4matter project.

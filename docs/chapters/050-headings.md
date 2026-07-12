@@ -1,4 +1,15 @@
-## Headings
+#e Markdown
+
+If you haven't used it before, Markdown is a very simple way of indicating style
+and structure in text. 
+
+Examples:
+
+\*bold*
+
+\# I am a heading
+
+You can find complete documentation [here](https://garrettgman.github.io/rmarkdown/authoring_pandoc_markdown.html).
 
 Markdown heading levels are how you give a book its structure. Book4matter reads
 them as a hierarchy and supplies the "PART" and "CHAPTER" labels, the page
