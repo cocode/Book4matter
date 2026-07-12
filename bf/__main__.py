@@ -190,6 +190,48 @@ def build_date_str(d=None):
     return f"{d.day} {d.strftime('%B %Y')}"
 
 
+# Heading roles the optional `heading-sizes:` map may set. Each corresponds to
+# a `text(size:)` site in templates/book.typ; a role the user omits keeps the
+# built-in default baked in there.
+HEADING_SIZE_ROLES = ("part", "chapter")
+# A Typst length with an explicit unit: an em-multiple of the body size
+# (1.6em) or absolute points (18pt). A unit is required -- see heading_sizes_typ.
+_HEADING_SIZE_RE = re.compile(r"[0-9]*\.?[0-9]+(?:em|pt)$")
+
+
+def heading_sizes_typ(cfg):
+    """Resolve book_style.yaml's optional `heading-sizes:` map into a Typst
+    dictionary literal for the meta block, e.g. `(part: 1.6em, chapter: 1.2em)`.
+
+    Keys name a heading role (see HEADING_SIZE_ROLES); each value is a length
+    the template drops straight into `text(size: ...)` -- an em-multiple of the
+    body size (`1.6em`) or an absolute point size (`18pt`). A unit is required:
+    a bare number is ambiguous (is `2` two ems -- huge -- or two points --
+    invisible?), so we reject it with a hint rather than guess. Roles the user
+    omits are left out of the emitted map; the template supplies each site's own
+    default, so an absent role -- or an absent map -- changes nothing."""
+    raw = cfg.get("heading-sizes")
+    if raw in (None, ""):
+        return "(:)"
+    if not isinstance(raw, dict):
+        die("heading-sizes must be a map, e.g. {part: 1.6em, chapter: 1.2em}")
+    unknown = [k for k in raw if k not in HEADING_SIZE_ROLES]
+    if unknown:
+        die(f"heading-sizes: unknown role(s) {unknown}; "
+            f"allowed: {list(HEADING_SIZE_ROLES)}")
+    parts = []
+    for role in HEADING_SIZE_ROLES:  # fixed order -> stable output
+        if role not in raw:
+            continue
+        val = str(raw[role]).strip()
+        if not _HEADING_SIZE_RE.fullmatch(val):
+            die(f"heading-sizes.{role} must be a length with a unit, e.g. "
+                f"1.6em (x body size) or 18pt (absolute); got {raw[role]!r}")
+        parts.append(f"{role}: {val}")
+    # Typst's empty-dictionary literal is `(:)`, not `()` (which is an array).
+    return "(" + ", ".join(parts) + ")" if parts else "(:)"
+
+
 def render_meta(cfg, pages, build_id=None, links="print", cover=None):
     w, h = parse_trim(cfg)
     inside, outside, top, bottom = resolve_margins(cfg, pages)
@@ -247,6 +289,9 @@ def render_meta(cfg, pages, build_id=None, links="print", cover=None):
         f"  chapter-style: {typst_str(chapter_style)},\n"
         f"  part-style: {typst_str(part_style)},\n"
         f"  part-label: {typst_str(part_label)},\n"
+        # Optional per-role heading-size overrides. Empty `(:)` when unset; the
+        # template falls back to each site's built-in default per role.
+        f"  heading-sizes: {heading_sizes_typ(cfg)},\n"
         f"  also-by: {render_also_by(cfg)},\n"
         f"  build-id: {build_id_typ},\n"
         # The date this build was produced, worded ("25 June 2026") for the
