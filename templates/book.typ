@@ -201,6 +201,11 @@
   // hyphenates and justifies.
   show heading: set text(font: meta.heading-font, hyphenate: false)
   show heading: set par(justify: false)
+  // Per-role heading-size overrides from book_style.yaml's `heading-sizes:`
+  // map. An absent role (or an older _meta.typ with no map at all) falls back
+  // to the built-in default named at each `.at(..)` site below, so leaving the
+  // map unset reproduces the original sizes exactly.
+  let hsizes = meta.at("heading-sizes", default: (:))
   show heading.where(level: 1): it => {
     context {
     if section-next.get() {
@@ -255,7 +260,7 @@
           v(0.85em)
         }
       }
-      block(text(size: 1.7em, weight: "regular")[#it.body])
+      block(text(size: hsizes.at("part", default: 1.7em), weight: "regular")[#it.body])
     } else {
       // Classic divider: all-caps label + part number, bold all-caps title,
       // the block sitting one-third down the page.
@@ -272,7 +277,7 @@
           v(1em)
         }
       }
-      block(text(size: 2em, weight: "bold", upper(it.body)))
+      block(text(size: hsizes.at("part", default: 2em), weight: "bold", upper(it.body)))
     }
     // Bottom trailer (both styles): a 2fr spacer then the page break. With the
     // 1fr top of the classic style it puts the block one-third down; with the
@@ -325,7 +330,7 @@
         }
       }
     }
-    set text(size: 1.4em, weight: "bold")
+    set text(size: hsizes.at("chapter", default: 1.4em), weight: "bold")
     // Centered style centres the (possibly wrapping) title; left keeps it flush.
     if centered { align(center, block(upper(it.body))) } else { block(upper(it.body)) }
     // Hard (non-weak) space so it survives next to a level-3 heading or a
@@ -370,24 +375,35 @@
   // no annotation -- otherwise KDP reports "non-printable markup removed" on the
   // affected pages. Older _meta.typ files predate the key, hence the default.
   let live-links = meta.at("links", default: "print") == "live"
+  // In the digital pdf a live hyperlink is clickable but otherwise looks exactly
+  // like body text, so a reader has no way to know it is there. Give external and
+  // mailto links a visible affordance: a deep, book-appropriate blue plus an
+  // underline (Typst's underline evades descenders, so g/y/p stay clean). The
+  // wrappers sit outside the link element, so it stays clickable. Print never
+  // gets here -- it strips links entirely -- and internal links (TOC entries,
+  // cross-references) are left unstyled, since a blue TOC reads as clutter.
+  let link-color = rgb("#1a56b0")
+  let styled(body) = underline(text(fill: link-color, body))
   show link: it => {
     set text(hyphenate: false)
     let d = it.dest
     if type(d) == str and (d.starts-with("http://") or d.starts-with("https://")) {
       // External web link. A bare autolink (no body) already shows its URL as
-      // its visible text: keep it clickable for the digital pdf, but in print
-      // emit just that text -- no annotation -- so KDP doesn't report
-      // "non-printable markup removed". A labeled link shows its words followed
-      // by the destination in parens so a print reader can still follow it.
+      // its visible text: keep it clickable (and styled) for the digital pdf,
+      // but in print emit just that text -- no annotation -- so KDP doesn't
+      // report "non-printable markup removed". A labeled link shows its words
+      // followed by the destination in parens so a print reader can follow it.
       let bare = it.body == none or it.body == [] or it.body == [#d]
       if bare {
-        if live-links { it } else { it.body }
+        if live-links { styled(it) } else { it.body }
+      } else if live-links {
+        styled(it)  // digital pdf: labeled external link stays clickable
       } else { [#it.body~(#d)] }
     } else if type(d) == str and d.starts-with("mailto:") {
       // Keep the address whole -- never split at an internal hyphen (box).
-      // Clickable for the digital pdf; in print just the boxed text, no link
-      // annotation (KDP forbids links, exactly as for TOC and footnotes).
-      if live-links { box(it) } else { box(it.body) }
+      // Clickable and styled for the digital pdf; in print just the boxed text,
+      // no link annotation (KDP forbids links, exactly as for TOC and footnotes).
+      if live-links { styled(box(it)) } else { box(it.body) }
     } else if live-links {
       it  // digital PDF: internal links stay clickable
     } else {
