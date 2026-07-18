@@ -14,7 +14,7 @@ runs the tool with your current directory mounted inside the container:
 ./run.sh print example/
 ```
 
-That first run takes a few seconds more, while the image is assembled.
+That first run takes a few seconds more, while the Docker image is assembled.
 
 ### Rebuilding the image
 

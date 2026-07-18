@@ -14,8 +14,8 @@ PDFs are likewise very reliable.
 
 #### EPUB
 
-Epub has a lot more issues. Every publisher has slightly different restrictions on things like font encryption, image sizes and more.
-Book4matter produces clean books that pass the standard epubcheck. Whether it will work with your epub publisher is something you
+EPUB has a lot more issues. Every publisher has slightly different restrictions on things like font encryption, image sizes and more.
+Book4matter produces clean books that pass the standard epubcheck. Whether it will work with your EPUB publisher is something you
 will have to check. We value feedback, and strive to make Book4matter more useful. Let us know if you find sharp edges.
 
 #### Print
@@ -29,7 +29,7 @@ going to press. Again, let us know if you find specific things we can improve to
 
 ### Input Formats
 
-While writing in Markdown is much simpler that writing in Word, there are some challenges. If you are using human editors, the editing
+While writing in Markdown is much simpler than writing in Word, there are some challenges. If you are using human editors, the editing
 industry largely runs on "Microsoft Word, with track changes". This makes it very easy to have an editor make a lot of changes, and you
 can easily accept them individually or as a whole.
 

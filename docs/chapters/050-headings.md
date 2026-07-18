@@ -1,7 +1,7 @@
-#e Markdown
+# Markdown
 
 If you haven't used it before, Markdown is a very simple way of indicating style
-and structure in text. 
+and structure in text.
 
 Examples:
 

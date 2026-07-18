@@ -7,8 +7,8 @@ set. This part covers all three.
 
 ## Quick Start
 
-A fast way to get started is to copy one of the provided examples, and then modify it 
-to suit your needs. 
+A fast way to get started is to copy one of the provided examples, and then modify it
+to suit your needs.
 
 1) Build it unmodified, in your directory.
     * Then you'll know everything works, before you start.

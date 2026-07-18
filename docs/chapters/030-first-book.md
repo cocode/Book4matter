@@ -31,13 +31,14 @@ hand, list them under a `chapters:` key in `book_metadata.yaml`; then only those
 files, in that order, are built.
 
 If you don't need chapter titles, you can just put one chapter per file, and Book4matter will
-assume each file is a chapter and number them. You can still put title on some chapters, like
+assume each file is a chapter and number them. You can still put titles on some chapters, like
 "# Introduction", "# Afterword".
 
 The Novels and Flat Books chapter covers that low-structure path.
 
-Plain `.txt` files can be used, too. (Actually, Book4matter just treats them like markdown. This
-could cause problems, if you have markdown like markup in your plain text files.).
+Plain `.txt` files can be used, too. Actually, Book4matter just treats .txt files just like markdown files.
+This could cause problems, if you have Markdown-like markup in your plain text files. But the only formatting
+you need in a text file is to leave a blank line between paragraphs, and put your chapters in individual files.
 
 ### Building each format
 
@@ -65,7 +66,7 @@ links.
 
 ### The bundled examples
 
-The repository ships with several examples. 
+The repository ships with several examples.
 
 * example
 * novel
