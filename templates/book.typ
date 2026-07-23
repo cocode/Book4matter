@@ -380,8 +380,8 @@
   // mailto links a visible affordance: a deep, book-appropriate blue plus an
   // underline (Typst's underline evades descenders, so g/y/p stay clean). The
   // wrappers sit outside the link element, so it stays clickable. Print never
-  // gets here -- it strips links entirely -- and internal links (TOC entries,
-  // cross-references) are left unstyled, since a blue TOC reads as clutter.
+  // gets here -- it strips links entirely. Internal links in body text use the
+  // same affordance; outline/TOC entries are rendered separately below.
   let link-color = rgb("#1a56b0")
   let styled(body) = underline(text(fill: link-color, body))
   show link: it => {
@@ -405,7 +405,7 @@
       // no link annotation (KDP forbids links, exactly as for TOC and footnotes).
       if live-links { styled(box(it)) } else { box(it.body) }
     } else if live-links {
-      it  // digital PDF: internal links stay clickable
+      styled(it)  // digital PDF: internal links stay clickable and visible
     } else {
       it.body  // print: visible text only, no link annotation
     }
