@@ -3,6 +3,7 @@
 Runs inside the pandoc/typst Docker image. Subcommands:
 
     bf print  [bookdir] [--pages N] [--keep]
+    bf all    [bookdir]                 (print + digital PDF + epub + html)
     bf epub   [bookdir] [--no-check]
     bf html   [bookdir]                 (whole book as one HTML page)
     bf html toc [bookdir]               (just the contents, no links)
@@ -675,6 +676,18 @@ def build_epub(bookdir, check=True, build_id=None):
         cover_path = (bookdir / cover).resolve()
         if not cover_path.exists():
             die(f"cover image not found: {cover_path}")
+        # EPUB covers must be a raster image or SVG. A PDF (fine as a full-bleed
+        # typst cover page for print/pdf) becomes application/octet-stream here
+        # and epubcheck rejects it with a cryptic OPF-012/RSC-032. Catch it now
+        # with an actionable message. mimetypes maps by extension, which is
+        # exactly what the EPUB writer keys on.
+        mime = mimetypes.guess_type(str(cover_path))[0] or ""
+        if not mime.startswith("image/"):
+            kind = mime or f"unrecognised type '{cover_path.suffix}'"
+            die(f"epub cover must be a raster image or SVG (JPG/PNG/GIF/SVG), "
+                f"but 'cover: {cover}' is {kind}. A PDF cover works for "
+                f"print/pdf but not epub -- export it to JPG or PNG "
+                f"(e.g. ~1600x2560) and point `cover:` at that.")
         cmd.insert(-2, f"--epub-cover-image={cover_path}")
 
     run(cmd, cwd=str(bookdir), env=filter_env(cfg))
@@ -1153,6 +1166,23 @@ def main(argv=None):
     d.add_argument("--build-id", default=None,
                    help="printing identifier (e.g. git short hash) shown on copyright page")
 
+    a = sub.add_parser("all",
+                       help="build everything in one run: interior PDF (print), "
+                            "digital PDF, EPUB, and HTML")
+    a.add_argument("bookdir", nargs="?", default=".",
+                   help="book directory (contains book_*.yaml and chapters/)")
+    a.add_argument("--pages", type=int, default=None,
+                   help="estimated page count, to pick a KDP-appropriate gutter")
+    a.add_argument("--keep", action="store_true",
+                   help="keep intermediate .typ files in out/")
+    a.add_argument("--no-parts", action="store_true",
+                   help="treat top-level (#) headings as chapters, not parts "
+                        "(shifts every heading down one level)")
+    a.add_argument("--no-check", dest="check", action="store_false",
+                   help="skip running epubcheck on the EPUB")
+    a.add_argument("--build-id", default=None,
+                   help="printing identifier (e.g. git short hash) shown on copyright page")
+
     e = sub.add_parser("epub", help="build an EPUB3 from a book directory")
     e.add_argument("bookdir", nargs="?", default=".",
                    help="book directory (contains book_*.yaml and chapters/)")
@@ -1208,6 +1238,16 @@ def main(argv=None):
         build_print(Path(args.bookdir), pages=args.pages, keep=args.keep,
                     build_id=args.build_id, links="live", include_cover=True,
                     no_parts=args.no_parts)
+    elif args.cmd == "all":
+        bd = Path(args.bookdir)
+        build_print(bd, pages=args.pages, keep=args.keep,
+                    build_id=args.build_id, links="print", include_cover=False,
+                    no_parts=args.no_parts)
+        build_print(bd, pages=args.pages, keep=args.keep,
+                    build_id=args.build_id, links="live", include_cover=True,
+                    no_parts=args.no_parts)
+        build_epub(bd, check=args.check, build_id=args.build_id)
+        build_html(bd)
     elif args.cmd == "epub":
         build_epub(Path(args.bookdir), check=args.check, build_id=args.build_id)
     elif args.cmd == "html":
