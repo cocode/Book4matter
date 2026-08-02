@@ -12,10 +12,12 @@ Runs inside the pandoc/typst Docker image. Subcommands:
 """
 import argparse
 import base64
+import errno
 import mimetypes
 import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -49,9 +51,52 @@ def die(msg):
     raise SystemExit(1)
 
 
+def die_icloud(what, culprit):
+    """Fail with guidance for the classic iCloud-placeholder failure.
+
+    The book tree is bind-mounted into this container from the host. When a
+    file under it is an iCloud "dataless" placeholder (contents evicted from
+    local disk under "Optimize Mac Storage"), the container cannot materialise
+    it: a plain read deadlocks (OSError EDEADLK) and a memory-mapped read --
+    e.g. typst mmap-ing a font -- page-faults into SIGBUS. Both are the same
+    root cause and the same fix, so they share this message."""
+    die(
+        f"{what}.\n"
+        f"  Likely cause: {culprit} is an iCloud file whose contents are not "
+        f"downloaded to local disk, so it can't be read inside Docker.\n"
+        f"  Fix: from the book directory on the host, force iCloud to download "
+        f"everything --\n"
+        f"      cat fonts/* chapters/* > /dev/null\n"
+        f"  -- then rebuild. To stop it recurring, right-click the book folder "
+        f"in Finder and choose \"Keep Downloaded\", or move the project out of "
+        f"iCloud."
+    )
+
+
+def read_text_icloud(path):
+    """Path.read_text(), but translate the iCloud-placeholder deadlock into a
+    clear message instead of a bare OSError traceback."""
+    try:
+        return path.read_text()
+    except OSError as e:
+        if e.errno in (errno.EDEADLK, errno.EAGAIN, errno.EWOULDBLOCK):
+            die_icloud(f"could not read {path.name} ({e.strerror})",
+                       f"the file '{path.name}'")
+        raise
+
+
 def run(cmd, **kw):
     print("· " + " ".join(str(c) for c in cmd), file=sys.stderr)
-    subprocess.run(cmd, check=True, **kw)
+    try:
+        subprocess.run(cmd, check=True, **kw)
+    except subprocess.CalledProcessError as e:
+        # A subprocess killed by a signal reports a negative return code. SIGBUS
+        # from typst/pandoc almost always means it mmap-ed an iCloud-placeholder
+        # file (typically a font under fonts/) whose pages can't be faulted in.
+        if e.returncode == -signal.SIGBUS:
+            die_icloud(f"{Path(cmd[0]).name} died with SIGBUS (bus error)",
+                       "a memory-mapped file, typically a font under fonts/,")
+        raise
 
 
 def filter_env(cfg):
@@ -410,7 +455,7 @@ def preprocess_chapters(chapters, tmpdir, force_no_parts=False, toc=None,
     (Introduction, Afterword) -- shown with its title but skipped by the chapter
     count -- while the un-titled files carry the numbering. Empty files are
     dropped. Originals are never modified; every rewrite lands in `tmpdir`."""
-    infos = [(f, f.read_text()) for f in chapters]
+    infos = [(f, read_text_icloud(f)) for f in chapters]
     # Drop empty / whitespace-only files: one would otherwise become a blank
     # numbered chapter and consume a number.
     infos = [(f, text, _scan_levels(text)) for (f, text) in infos if text.strip()]
