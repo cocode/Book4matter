@@ -502,14 +502,23 @@ def build_print(bookdir, pages=None, keep=False, build_id=None, links="print",
         # the front-matter→arabic reset (see its Pandoc filter); an env var is
         # the simplest way to pass a config flag into a lua filter.
         env = {**os.environ, "BF_PARTS_RECTO": "1" if cfg.get("parts-recto") else "0"}
+        filters = []
+        if links == "print":
+            # Flatten source-level internal links before Typst sees them.
+            # Label links can bypass book.typ's show-link rule, while external
+            # links remain available for the print URL rendering there.
+            filters.append(f"--lua-filter={TEMPLATES / 'print-links.lua'}")
+        # wrap.lua first so it packages its body before parts.lua starts
+        # inserting raw `#pagebreak()` blocks between sibling headings; if
+        # the order were reversed, a pagebreak would land inside a wrap
+        # body and typst rejects pagebreaks inside content blocks.
+        filters.extend([
+            f"--lua-filter={TEMPLATES / 'wrap.lua'}",
+            f"--lua-filter={TEMPLATES / 'parts.lua'}",
+        ])
         run(["pandoc", *[str(c) for c in proc],
              "-f", "markdown", "-t", "typst", "--wrap=preserve",
-             # wrap.lua first so it packages its body before parts.lua starts
-             # inserting raw `#pagebreak()` blocks between sibling headings; if
-             # the order were reversed, a pagebreak would land inside a wrap
-             # body and typst rejects pagebreaks inside content blocks.
-             f"--lua-filter={TEMPLATES / 'wrap.lua'}",
-             f"--lua-filter={TEMPLATES / 'parts.lua'}",
+             *filters,
              "-o", str(out / "_body.typ")],
             env=env)
     finally:
