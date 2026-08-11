@@ -3,7 +3,7 @@
 ### Origins
 
 Book4matter began due to frustration with Microsoft Word. I wanted to not have to worry about formatting
-while I was writing, and not worry about how that format would get translated when formatting as a pdf for printing.
+while I was writing, and not worry about how that format would get translated when formatting as a PDF for printing.
 
 Another issue was that writing in Word meant version control really wasn't an option.
 
@@ -11,7 +11,7 @@ Book4matter allows you to write once, in plain text, and publish to multiple for
 
 ### Goals
 
-Book4matter makes writing my books easier. I hope it will do the same for you. Let us know, via github, about any issues you run into. As with many one-person projects, this project does what I need it to do. Suggestion for how to
+Book4matter makes writing my books easier. I hope it will do the same for you. Let us know, via GitHub, about any issues you run into. As with many one-person projects, this project does what I need it to do. Suggestion for how to
 make it work for you, too, are welcome.
 
 ### Dependencies

@@ -71,7 +71,10 @@ where you write them, in the *Tables, Quotes, Footnotes, and Links* chapter.
 
 The `pdf` command is for screen reading, so hyperlinks stay live there: the
 table of contents, footnotes, cross-references, and external links are all
-clickable. The `print` command is for physical books and KDP interiors, so
-internal link annotations are removed. External web links print their destination
-in parentheses after the visible text, and email addresses are kept whole so they
-never break at a hyphen. EPUB and HTML links stay live and bare.
+clickable. The `print` command is for physical books and KDP interiors, which
+forbid clickable annotations --- so instead of dropping the reader, a print
+cross-reference to another part of the book prints as its text plus the target
+page, `"Rotation" (page 42)`, with the page number resolved at build time.
+External web links print their destination in parentheses after the visible
+text, and email addresses are kept whole so they never break at a hyphen. EPUB
+and HTML links stay live and bare.

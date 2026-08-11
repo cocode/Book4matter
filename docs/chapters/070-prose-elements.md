@@ -49,11 +49,19 @@ use `print` when the file is going to a printer or to KDP.
 
 - **In digital PDF, EPUB, and HTML** links stay live. That includes the table of
   contents, footnotes, cross-references, and external web links.
-- **In print** internal hyperlinks are removed so the interior has no clickable
-  annotations. External web links print the destination after the visible text,
-  so `[CLICK HERE](https://www.example.com)` becomes `CLICK HERE
-  (https://www.example.com)`. A bare autolink shows its URL once. Email addresses
-  are kept whole and never broken at a hyphen across a line.
+- **In print** there are no clickable annotations, because KDP rejects them, but
+  the links still guide the reader. An internal cross-reference to another part
+  of the book --- `[Rotation](#rotation)` --- prints as its text followed by the
+  page it points to, so `"Rotation" (page 42)`; the page number is resolved for
+  you at build time and updates automatically as the book repaginates. (A link
+  whose target is missing simply prints its text.) External web links print the
+  destination after the visible text, so `[CLICK HERE](https://www.example.com)`
+  becomes `CLICK HERE (https://www.example.com)`. A bare autolink shows its URL
+  once. Email addresses are kept whole and never broken at a hyphen across a line.
+
+Write internal links with Markdown link syntax, `[text](#anchor)`, where the
+anchor matches a heading. Raw HTML anchors like `<a href="#anchor">` do not
+survive to print --- only the Markdown form is turned into a page reference.
 
 ### Punctuation
 
