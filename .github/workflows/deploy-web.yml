@@ -1,0 +1,65 @@
+name: Deploy website to GitHub Pages
+
+# Build the book4matter website (web/) with the same Docker toolchain used
+# locally, then publish web/out/ to GitHub Pages. Runs on every push to main
+# that touches the site or the toolchain, and can be triggered by hand.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "web/**"
+      - "docs/book4matter-web.css"   # shared stylesheet the site reuses
+      - "Dockerfile"
+      - "run.sh"
+      - ".github/workflows/deploy-web.yml"
+  workflow_dispatch:
+
+# Permissions the deploy-pages action needs.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Let a newer push supersede an in-flight deploy, but don't cancel a run
+# that's mid-publish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Build the book4matter image and render the site. run.sh builds the
+      # image on first use; --rebuild forces a clean build so CI never reuses a
+      # stale layer. Docker is preinstalled on GitHub runners.
+      - name: Build Docker image
+        run: ./run.sh --rebuild
+
+      - name: Build website
+        run: web/build.sh
+
+      # GitHub Pages serves index.html; the tool emits book4matter.html. Stage
+      # the output and rename the entry page (the stylesheet link is relative,
+      # so book_style.css comes along unchanged).
+      - name: Stage site
+        run: |
+          mkdir -p _site
+          cp web/out/book_style.css _site/
+          cp web/out/book4matter.html _site/index.html
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
