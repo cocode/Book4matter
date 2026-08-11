@@ -406,8 +406,24 @@
       if live-links { styled(box(it)) } else { box(it.body) }
     } else if live-links {
       styled(it)  // digital PDF: internal links stay clickable and visible
+    } else if type(d) == label {
+      // Print internal cross-reference. KDP forbids link annotations, but a
+      // paper reader still needs to find the target -- so resolve the target's
+      // page at render time and print `"text" (page N)`. The parenthetical
+      // form flows inside the author's sentence without colliding with a
+      // lead-in ("read "text" (page N)"). Only typst knows the page number, so
+      // this must happen here, not in a pandoc filter. A dangling anchor
+      // (target not present in the book) falls back to plain text, exactly as a
+      // stripped link would have rendered.
+      context {
+        let hits = query(d)
+        if hits.len() > 0 {
+          let pg = counter(page).at(hits.first().location()).first()
+          ["#it.body" (page #pg)]
+        } else { it.body }
+      }
     } else {
-      it.body  // print: visible text only, no link annotation
+      it.body  // print: any other internal link, visible text only
     }
   }
 
