@@ -11,6 +11,10 @@ word input comes in with h1 as parts, but most people would use h1 for chapter h
 - [ ] Should we build and publish a docker image?
 - [ ] If there are no headings in chapter files, and there is more than one file, auto-number the chapters by file.
 
+Cover Generator
+Could I add a cover generator to book4matter? Take the front image, and the back image, and adjust the spine for the number of pages? It would be specific to amazon.
+
+
 ## Blocked / deferred
 
 - [ ] **Body widow/orphan control.** No single paragraph line stranded at a page
@@ -29,3 +33,4 @@ We should actually split the two, at some point.
 ## Decisions (resolved)
 3. Borderline → table styling, block-quote, print hyperlinks IN; figure
    captions OUT.
+

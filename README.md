@@ -1,28 +1,57 @@
 # Book4matter   (Book Formatter)
 
-This is a tool to take markdown (pandoc flavored) and convert it to:
+Book4matter is a tool for formatting books for publication. It takes plain text or Markdown (pandoc flavored) and converts it to:
 
-1. PDF for printing (specifically aimed at kdp, generated via Typst)
-2. epub
-3. html
+1. PDF for printing
+1. PDF for sharing, as a PDF
+2. ePub
+3. HTML
 
-This is a personal project I use to format the books I have published. 
-It takes markdown, and uses pandoc to convert it to html, or epub. For pdf/print, pandoc outputs 
-to Typst, which does the print formatting. This setup allows you to generate epub, html and print
-from the same source. It also separates the styling from the source, so you can apply the same style
-to multiple books, or change the style of multiple books by making a change in one place.
+This project uses pandoc to convert plain text or Markdown to HTML or ePub. For pdf/print, pandoc outputs to Typst, which does the print formatting. This setup allows you to generate EPUB, HTML and PDFs from the same source. It also separates the styling from the source, so you can apply the same style to multiple books, or change the style of multiple books by making a change in one place.
 
-This is a command line tool, so it's probably best for people that are comfortable with that.
+Using Markdown rather than plain text will give you more control of the output, and allow features like hyperlinks and images.
+
+Book4matter is a command line tool, for now, so it's probably best for people that are comfortable with that.
+
+## Documentation
+
+Full documentation is available in ./docs. The documentation is, of course, formatted with 
+Book4matter. This lets you quickly tests if your setup is working. 
+
+```bash
+./run.sh html docs
+```
+
+This will give you HTML formatted documentation in the ./docs/out directory.
+
+See [DESIGN.md](DESIGN.md) for the full design and rationale.
+
+## Examples
+
+Book4matter comes with three example projects. The documentation, mentioned above. An example, in ./example
+that uses multiple features of Book4matter. And ./novel, which demonstrates the simplest way to use Book4matter. 
+
+## History
 
 Note that this project was formerly "Kindle Pandoc Creator", so you may see references to that name,
 or to "kpc" surviving in the code and documentation.
 
+## What You Provide (Project Layout)
 
-See [DESIGN.md](DESIGN.md) for the full design and rationale.
+Book4matter expects things in standard places.
+
+- `book_metadata.yaml` — title, author, etc. - See the docs for all options.
+- `book_style.yaml` — trim size, margins, font.
+- `chapters/*.md` — one file per chapter (or list them in a `chapters:` key).
+- `media/` — images, referenced as `../media/...` from chapter files.
+
+This produces
+- `out/book-title-interior.pdf` — the build output.
+
 
 ## Docker Build
 
-This project is build on docker, for security/isolation. There is no reason it could not just be run locally.
+This project is built on docker, for security/isolation. There is no reason it could not just be run locally. We are working on a webapp version.
 
 ## Usage
 
@@ -31,7 +60,6 @@ Build the bundled example:
 ```bash
 ./run.sh print example/          # -> example/out/interior.pdf
 ```
-
 Build your own book (a directory containing `book_metadata.yaml` and `chapters/*.md`):
 
 ```bash
@@ -57,7 +85,9 @@ website), or a single chapter:
 — the in-book anchors point nowhere off-site — ready to style and drop into a
 web page. `html` and `html chapter` reuse the EPUB styling.
 
-### Print & bind at home (imposition)
+### Print & Bind at Home ("Imposition")
+
+You can skip this section, if you don't want to bind your own books.
 
 `impose` rearranges a PDF's pages **two-up into signatures** so you can print it
 on a home printer, fold the sheets, and bind the book by hand. A *signature* is
@@ -103,17 +133,10 @@ To rebuild the image without running a build:
 docker build -t book4matter .
 ```
 
-## Book layout
-
-- `book_metadata.yaml` — title, author
-- `book_style.yaml` — trim size, margins, font.
-- `chapters/*.md` — one file per chapter (or list them in a `chapters:` key).
-- `media/` — images, referenced as `../media/...` from chapter files.
-- `out/book-title-interior.pdf` — the build output.
 
 ## Heading conventions
 
-- `# Title` (H1) is a **part**: it gets a divider page and an automatic
+- `# Title` (H1) is a **part**, aka a book section: it gets a divider page and an automatic
   "PART N" label. `## Title` (H2) is a **chapter** ("CHAPTER N"); chapter
   numbers run straight through part boundaries.
 - Text written directly beneath a part heading (before the next heading —
@@ -126,6 +149,8 @@ docker build -t book4matter .
 - `{.unnumbered}` on a part or chapter heading suppresses its auto label
   without advancing the count; `{.new-page}` forces a page break before a
   heading.
+- 
+  You can elect not to use Parts. See the documentation for details.
 
 ## Images
 
