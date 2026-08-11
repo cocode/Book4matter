@@ -14,6 +14,14 @@ if [[ "$rebuild" == "1" ]] || ! docker image inspect "$IMAGE" >/dev/null 2>&1; t
   docker build -t "$IMAGE" "$HERE"
 fi
 
+# `--rebuild` on its own means "just (re)build the image" -- there's no book to
+# build, so stop here rather than falling through into `docker run` with no
+# subcommand (which would make bf error on the missing command).
+if [[ "$rebuild" == "1" && $# -eq 0 ]]; then
+  echo "Image $IMAGE is up to date." >&2
+  exit 0
+fi
+
 # Mount the whole tree at /work READ-ONLY, then make writable only the *target
 # book's* writable subdirs -- so the container can never mutate the book sources
 # (or anything outside the book being built). The target book dir is taken from
