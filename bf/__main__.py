@@ -548,12 +548,13 @@ def build_print(bookdir, pages=None, keep=False, build_id=None, links="print",
         # the front-matter→arabic reset (see its Pandoc filter); an env var is
         # the simplest way to pass a config flag into a lua filter.
         env = {**os.environ, "BF_PARTS_RECTO": "1" if cfg.get("parts-recto") else "0"}
+        # Internal links are handled entirely by book.typ's show-link rule now:
+        # in the print build it turns each one into `See "text" on page N`
+        # (resolving the target's page -- only typst knows it), and in the
+        # digital pdf it keeps them clickable. So, unlike before, we deliberately
+        # leave internal links in the AST for both targets rather than stripping
+        # them for print. External links were never touched here.
         filters = []
-        if links == "print":
-            # Flatten source-level internal links before Typst sees them.
-            # Label links can bypass book.typ's show-link rule, while external
-            # links remain available for the print URL rendering there.
-            filters.append(f"--lua-filter={TEMPLATES / 'print-links.lua'}")
         # wrap.lua first so it packages its body before parts.lua starts
         # inserting raw `#pagebreak()` blocks between sibling headings; if
         # the order were reversed, a pagebreak would land inside a wrap
