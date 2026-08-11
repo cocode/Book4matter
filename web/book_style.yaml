@@ -1,0 +1,13 @@
+# book_style.yaml -- HOW it looks.
+#
+# For the HTML build, appearance comes almost entirely from the stylesheet
+# (book4matter-web.css, copied into out/book_style.css by build.sh), not from
+# the print-oriented keys below. These are kept so the same directory could
+# also be built as a 6x9 PDF/EPUB if you ever want a "manual" edition of the
+# site. The html command always emits a table of contents.
+
+trim: 6x9
+font: "Libertinus Serif"
+heading-font: "Liberation Sans"
+font-size: 11pt
+language: en

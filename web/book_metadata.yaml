@@ -1,0 +1,16 @@
+# book_metadata.yaml -- WHAT this site is (identity, not appearance).
+#
+# This directory is a book4matter "book" whose single HTML output is the
+# Book4matter website. Build it from the project root with:
+#     ./run.sh html web/
+# then open web/out/book4matter.html. (web/build.sh does this and drops the
+# stylesheet in place for you.)
+
+title: "Book4matter"
+subtitle: "Markdown in. Print, PDF, EPUB, and a website out."
+author: "Thomas Hill"
+year: 2026
+publisher: ""
+rights: "© 2026 Thomas Hill."
+isbn: ""
+language: en
