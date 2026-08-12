@@ -1,4 +1,4 @@
-## Tables, Quotes, Footnotes, and Links
+## Tables, Quotes, Footnotes, Links and Math
 
 Ordinary book prose --- tables, quotations, notes, and links --- needs no special
 syntax beyond standard Markdown. Book4matter sets each in book style.
@@ -68,3 +68,9 @@ survive to print --- only the Markdown form is turned into a page reference.
 Write punctuation the Markdown way and the build sets it properly: `--` becomes
 an en dash, `---` an em dash, and straight quotes turn into curly ones. There is
 no need to paste Unicode dashes or smart quotes by hand.
+
+### Math
+
+Unfortunately, we don't yet have math expressions working fully in HTML and EPUB. 
+They work fine in pdf and print.
+
