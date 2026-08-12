@@ -1,27 +1,34 @@
 name: Deploy website to GitHub Pages
 
-# Build the book4matter website (web/) with the same Docker toolchain used
-# locally, then publish web/out/ to GitHub Pages. Runs on every push to main
-# that touches the site or the toolchain, and can be triggered by hand.
+# Build the book4matter website (web/) and, so visitors can see the tool's real
+# output, every form (print PDF, digital PDF, EPUB, HTML) of the three sample
+# books: the manual (docs/), the demo (example/), and a novel (novel/). The
+# whole lot is published to GitHub Pages; the site links to the downloads.
+#
+# The action installs pandoc + typst directly on the runner instead of using
+# the project's Docker image -- fewer bytes to fetch, and CI is already a
+# container. Versions track the local Docker toolchain but are not otherwise
+# pinned. Java/epubcheck are intentionally skipped (EPUB validation only), so
+# `bf all` is run with --no-check.
 on:
   push:
     branches: [main]
     paths:
       - "web/**"
-      - "docs/book4matter-web.css"   # shared stylesheet the site reuses
-      - "Dockerfile"
-      - "run.sh"
+      - "docs/**"
+      - "example/**"
+      - "novel/**"
+      - "bf/**"
+      - "templates/**"
       - ".github/workflows/deploy-web.yml"
   workflow_dispatch:
 
-# Permissions the deploy-pages action needs.
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# Let a newer push supersede an in-flight deploy, but don't cancel a run
-# that's mid-publish.
+# Let a newer push supersede a queued deploy, but never cancel one mid-publish.
 concurrency:
   group: pages
   cancel-in-progress: false
@@ -29,26 +36,75 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      # Match the versions baked into the local Docker image (Dockerfile /
+      # pandoc/typst base). Bump these when you bump the image.
+      PANDOC_VERSION: "3.9.0.2"
+      TYPST_VERSION: "0.14.2"
+      WRAP_IT_VERSION: "0.1.1"
     steps:
       - uses: actions/checkout@v4
 
-      # Build the book4matter image and render the site. run.sh builds the
-      # image on first use; --rebuild forces a clean build so CI never reuses a
-      # stale layer. Docker is preinstalled on GitHub runners.
-      - name: Build Docker image
-        run: ./run.sh --rebuild
-
-      - name: Build website
-        run: web/build.sh
-
-      # GitHub Pages serves index.html; the tool emits book4matter.html. Stage
-      # the output and rename the entry page (the stylesheet link is relative,
-      # so book_style.css comes along unchanged).
-      - name: Stage site
+      - name: Install pandoc
         run: |
-          mkdir -p _site
-          cp web/out/book_style.css _site/
+          curl -fsSL -o /tmp/pandoc.deb \
+            "https://github.com/jgm/pandoc/releases/download/${PANDOC_VERSION}/pandoc-${PANDOC_VERSION}-1-amd64.deb"
+          sudo dpkg -i /tmp/pandoc.deb
+
+      - name: Install typst
+        run: |
+          curl -fsSL -o /tmp/typst.tar.xz \
+            "https://github.com/typst/typst/releases/download/v${TYPST_VERSION}/typst-x86_64-unknown-linux-musl.tar.xz"
+          tar -xf /tmp/typst.tar.xz -C /tmp
+          sudo install /tmp/typst-x86_64-unknown-linux-musl/typst /usr/local/bin/typst
+
+      - name: Install Python + font dependencies
+        run: |
+          # PyYAML for the bf CLI; Liberation Sans (headings) via apt. The body
+          # face, Libertinus Serif, is bundled in the typst binary.
+          python3 -m pip install --quiet pyyaml
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-liberation
+
+      - name: Vendor the wrap-it typst package
+        run: |
+          # Same as the Dockerfile: preload the local typst package cache so the
+          # compile never reaches the network.
+          dir="$HOME/.cache/typst/packages/preview/wrap-it/${WRAP_IT_VERSION}"
+          mkdir -p "$dir"
+          for f in typst.toml wrap-it.typ LICENSE README.md; do
+            curl -fsSL -o "$dir/$f" \
+              "https://raw.githubusercontent.com/typst/packages/main/packages/preview/wrap-it/${WRAP_IT_VERSION}/$f"
+          done
+
+      - name: Build the website and all sample books
+        env:
+          BF_TEMPLATES: ${{ github.workspace }}/templates
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          # Run bf directly (not via run.sh, which is the Docker wrapper).
+          # The website: a single HTML page.
+          python3 -m bf html web/
+          # Each sample book: every form. --no-check skips epubcheck (no Java).
+          for book in docs example novel; do
+            python3 -m bf all --no-check "$book"
+          done
+
+      - name: Assemble the Pages site
+        run: |
+          set -euo pipefail
+          mkdir -p _site/examples
+          # Landing page (Pages serves index.html) + the shared site stylesheet
+          # the generated HTML links as book_style.css.
+          cp docs/book4matter-web.css _site/book_style.css
           cp web/out/book4matter.html _site/index.html
+          # Each sample book's whole out/ under examples/<dir>/, with the shared
+          # stylesheet dropped in so its HTML page is themed like the site.
+          for book in docs example novel; do
+            mkdir -p "_site/examples/$book"
+            cp -R "$book/out/." "_site/examples/$book/"
+            cp docs/book4matter-web.css "_site/examples/$book/book_style.css"
+          done
 
       - uses: actions/upload-pages-artifact@v3
         with:
