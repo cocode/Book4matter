@@ -5,9 +5,9 @@
 Powered by Typst under the hood: proper hyphenation and justification, small
 title/copyright/contents front matter, running heads, and quality book faces
 (Libertinus Serif for text, a Helvetica-metric sans for headings) bundled right
-in the image — no font wrangling.
+in the image — no font wrangling. You can use your own fonts, too, of course.
 
-## Made for KDP
+## KDP Support
 
 Trim sizes, gutter margins that scale with page count, and an EPUB that clears
 the same validator KDP uses. The defaults aim at a US 6×9 trade paperback that
@@ -21,7 +21,7 @@ nothing but words and scene breaks.
 
 ## Novels and non-fiction alike
 
-Treat top-level headings as *parts* with chapters beneath, or flip a switch and
+Treat top-level headings as *parts* (or sections) with chapters beneath, or flip a switch and
 let them be numbered chapters in a novel with no visible headings at all.
 
 ## Import from Word

@@ -3,7 +3,10 @@
 Book4matter runs entirely inside a Docker image, so there is nothing to install
 on your machine but Docker itself — no pandoc, no Typst, no fonts to hunt down.
 
-## Get it
+## Install Docker. 
+https://docs.docker.com/engine/install/
+
+## Get book4matter
 
 Pull the image from Docker Hub:
 
