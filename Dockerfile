@@ -6,7 +6,23 @@ FROM pandoc/typst:3.9.0.2@sha256:8b88646589ec8aa05afdca02dbe6849fa38f3235fb23559
 # headings; openjdk + unzip for the epubcheck validator; py3-pypdf for the
 # `bf impose` 2-up signature imposition. (pandoc and typst already ship in the
 # base.)
-RUN apk add --no-cache python3 py3-yaml font-liberation openjdk17-jre-headless unzip py3-pypdf
+#
+# Versions are pinned for reproducible builds, matching what Alpine 3.23
+# (the base image's release) serves. NOTE: Alpine's stable branches are
+# rolling -- when a package is updated the old -rN build is removed from the
+# mirror, so a pinned version eventually 404s and the build fails loudly. That
+# is deliberate: it forces a conscious bump here rather than silent drift. To
+# refresh, run against the pinned base:
+#   docker run --rm --entrypoint sh <base> -c \
+#     'apk add --no-cache --simulate python3 py3-yaml font-liberation \
+#        openjdk17-jre-headless unzip py3-pypdf | grep Installing'
+RUN apk add --no-cache \
+      python3=3.12.13-r0 \
+      py3-yaml=6.0.3-r0 \
+      font-liberation=2.1.5-r2 \
+      openjdk17-jre-headless=17.0.20_p8-r0 \
+      unzip=6.0-r16 \
+      py3-pypdf=6.4.0-r0
 
 # Vendor the wrap-it typst package into the local package cache so typst never
 # has to reach out to the network at compile time. Pinned to a specific version
