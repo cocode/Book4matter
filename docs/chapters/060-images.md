@@ -6,7 +6,7 @@ Keep images in a `media/` folder at the root of your book. Chapter files sit one
 level down, in `chapters/`, so they reference an image with a leading `../`:
 
 ```
-![A frame from the Gaskell Ball](../media/gaskell.jpg)
+![A frame from the Vienna Ball](../media/vienna.jpg)
 ```
 
 That one path works everywhere --- print, digital PDF, EPUB, HTML, and your
