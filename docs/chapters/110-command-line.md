@@ -109,12 +109,15 @@ The EPUB cover, if any, comes from the `cover:` key in `book_metadata.yaml`.
 Rearranges a PDF two-up into printable signatures for home binding. It is
 separate from the `print` command: KDP and commercial print shops impose pages
 for you, but `impose` is useful when you are printing on a home printer, folding
-the sheets, and binding the book yourself.
+the sheets, and binding the book yourself. A *signature* is a small stack of
+sheets folded together down the middle; several signatures are then stacked and
+sewn or glued into a codex.
 
 `impose` takes any PDF, not just a book4matter interior. The output is written
 next to its input, so `docs/out/book4matter-interior.pdf` produces
 `docs/out/book4matter-signatures.pdf`. Print the result double-sided, flipping on
-the short edge, then fold each signature down the middle.
+the short edge, then fold each signature down the middle. The page streams are
+Flate-compressed, so the imposed PDF stays about the size of the input.
 
 - `--paper letter` or `--paper a4` --- the sheet you print on. The default is
   `letter`.
