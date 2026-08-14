@@ -1,4 +1,4 @@
-# How it works
+# How it works {.unnumbered}
 
 Book4matter is a thin pipeline over two excellent tools, wired together so you
 never have to touch either directly.

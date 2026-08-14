@@ -1,4 +1,4 @@
-# Book4matter
+## Introduction {.unnumbered}
 
 **Write in Markdown. Publish everywhere.** 
 Book4matter (Book Formatter) takes in Markdown, or plain text, and formats it for distribution. It uses this one source to produce output in HTML, EPUB, PDF and print versions. (PDF versions have clickable links, print has page references).
@@ -14,6 +14,8 @@ Book4matter is a command line tool, for now. It's best for people who are comfor
 
 Check back later for a web version.
 
+# Overview
+
 ## Why it exists
 
 Book4matter lets you keep your text, and the formatting separate:
@@ -25,4 +27,3 @@ Book4matter lets you keep your text, and the formatting separate:
 Point ten books at one style file and restyle them all from a single edit. The
 manuscript never changes.
 
-## Examples

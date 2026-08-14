@@ -1,9 +1,11 @@
 # Quick start
 
-Book4matter runs entirely inside a Docker image, so there is nothing to install
-on your machine but Docker itself — no pandoc, no Typst, no fonts to hunt down.
+The quickest way to run Book4matter is the prebuilt Docker image: nothing to
+clone, and nothing to install but Docker itself — no pandoc, no Typst, no fonts
+to hunt down. (Prefer to install the tools directly, or build the image
+yourself? The manual covers all three ways.)
 
-## Install Docker. 
+## Install Docker
 https://docs.docker.com/engine/install/
 
 ## Get book4matter
@@ -11,9 +13,6 @@ https://docs.docker.com/engine/install/
 Pull the image from Docker Hub:
 
     docker pull book4matter/book4matter
-
-Or clone the repository and let the bundled `run.sh` build the image for you the
-first time you use it.
 
 ## Make a book
 
@@ -31,10 +30,13 @@ sequence.
 
 ## Build it
 
-    ./run.sh print my-book/     # KDP print interior PDF
-    ./run.sh pdf   my-book/     # shareable PDF with live links
-    ./run.sh epub  my-book/     # validated EPUB
-    ./run.sh html  my-book/     # single-page website
+Mount the folder that holds your book at `/work` and name the form you want.
+Everything after the image name is an ordinary `bf` command:
 
-Each command writes into `my-book/out/`. Your sources are mounted read-only —
-the tool can never modify your manuscript.
+    docker run --rm -v "$PWD":/work book4matter/book4matter print my-book/   # KDP print interior PDF
+    docker run --rm -v "$PWD":/work book4matter/book4matter pdf   my-book/   # shareable PDF with live links
+    docker run --rm -v "$PWD":/work book4matter/book4matter epub  my-book/   # validated EPUB
+    docker run --rm -v "$PWD":/work book4matter/book4matter html  my-book/   # single-page website
+
+Each command writes into `my-book/out/`; the tool only ever writes there, never
+back over your manuscript.
