@@ -18,4 +18,4 @@ language: en
 # HTML output only: this file's contents are injected verbatim just before
 # </body> (see analytics.html). Used here for the web-analytics script; the
 # EPUB/PDF/print builds ignore it.
-html-body-end: analytics.htmlx
+html-body-end: analytics.html
