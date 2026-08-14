@@ -3,7 +3,8 @@
 The quickest way to run Book4matter is the prebuilt Docker image: nothing to
 clone, and nothing to install but Docker itself — no pandoc, no Typst, no fonts
 to hunt down. (Prefer to install the tools directly, or build the image
-yourself? The manual covers all three ways.)
+yourself? The [manual](https://book4matter.com/examples/docs/book4matter.html)
+covers all three ways.)
 
 ## Install Docker
 https://docs.docker.com/engine/install/
