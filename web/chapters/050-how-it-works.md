@@ -15,9 +15,11 @@ that points at it.
 
 ## Learn more
 
-The full manual — installation, configuration, every command, and the design
-decisions behind the defaults — is itself a Book4matter book. Build it from the
-`docs/` directory, or read it in the repository.
+The full [manual](https://book4matter.com/examples/docs/book4matter.html) —
+installation, configuration, every command, and the design decisions behind the
+defaults — is itself a Book4matter book. Read it online, build it from the
+`docs/` directory, or read the source in the
+[repository](https://github.com/cocode/Book4matter/tree/main/docs).
 
 Book4matter is a command-line tool, and open source. If you're comfortable in a
 terminal and want your words to look like a real book, it's built for you.

@@ -10,7 +10,7 @@ A ready-to-print PDF.
 I've used this for Amazon KDP, so it follows the rules there, like "no hyperlinks".
 
 External hyperlinks are reformatted to show the URL after the anchor text. 
- Internal links are converted to page number references, like
+ Internal links are [converted to page number references](https://book4matter.com/examples/docs/book4matter.html#links-in-pdf-and-print), like
 
     See HTML on page 37
 
@@ -31,7 +31,7 @@ Note: Each EPUB publisher has different requirements. They restrict things like 
 
 ## Website
 
-One self-contained HTML page with an automatic table of contents and your own
-stylesheet
+One self-contained HTML page with an automatic table of contents and [your own
+stylesheet](https://book4matter.com/examples/docs/book4matter.html#restyling-the-website-without-touching-the-template)
 
 This is how this website was generated. 

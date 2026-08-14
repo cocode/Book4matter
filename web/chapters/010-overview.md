@@ -21,8 +21,8 @@ Check back later for a web version.
 Book4matter lets you keep your text, and the formatting separate:
 
 - Your **manuscript** is Markdown you can read, diff, and version in git.
-- The **metadata** (title, author, rights) lives in one small YAML file.
-- The **style** (trim, margins, fonts) lives in another YAML file.
+- The **metadata** (title, author, rights) lives in [one small YAML file](https://book4matter.com/examples/docs/book4matter.html#the-book_metadata.yaml-file).
+- The **style** (trim, margins, fonts) lives in [another YAML file](https://book4matter.com/examples/docs/book4matter.html#the-book_style.yaml-file).
 
 Point ten books at one style file and restyle them all from a single edit. The
 manuscript never changes.
