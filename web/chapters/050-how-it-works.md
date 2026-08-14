@@ -1,4 +1,4 @@
-# How it works {.unnumbered}
+## Afterword 
 
 Book4matter is a thin pipeline over two excellent tools, wired together so you
 never have to touch either directly.
@@ -13,7 +13,7 @@ Because the styling lives outside your prose, the same manuscript flows into
 every format without edits, and one change to a style file re-themes every book
 that points at it.
 
-## Learn more
+### Learn more
 
 The full [manual](https://book4matter.com/examples/docs/book4matter.html) —
 installation, configuration, every command, and the design decisions behind the

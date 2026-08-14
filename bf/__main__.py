@@ -52,6 +52,10 @@ def die(msg):
     raise SystemExit(1)
 
 
+def warn(msg):
+    print(f"bf: warning: {msg}", file=sys.stderr)
+
+
 def die_icloud(what, culprit):
     """Fail with guidance for the classic iCloud-placeholder failure.
 
@@ -767,6 +771,30 @@ def build_html(bookdir):
                'max-width:min(100%,28rem);max-height:90vh;height:auto;" />\n')
         text = re.sub(r"(<body[^>]*>)", lambda m: m.group(1) + "\n" + img,
                       text, count=1)
+    # Optional HTML-only include, spliced in verbatim just before </body>. This
+    # is where an end-of-body script belongs -- a web-analytics snippet, say.
+    # The file's contents are injected as-is (raw HTML/JS), and the key is read
+    # ONLY here: the EPUB, PDF, and print builds never see it, so they stay
+    # script-free (and the EPUB stays epubcheck-clean). Path is book-relative,
+    # like `cover`.
+    #
+    # A missing include only means "no snippet" -- it must never damage the page.
+    # So warn and carry on, letting the fully post-processed page (stylesheet
+    # link and all) be written below. Failing here instead would leave pandoc's
+    # raw, unstyled output on disk, turning a filename typo into a broken page.
+    body_end = cfg.get("html-body-end")
+    if body_end:
+        inc_path = (bookdir / body_end).resolve()
+        if inc_path.exists():
+            snippet = inc_path.read_text()
+            idx = text.rfind("</body>")
+            if idx == -1:
+                text += "\n" + snippet + "\n"
+            else:
+                text = text[:idx] + snippet + "\n" + text[idx:]
+        else:
+            warn(f"html-body-end file not found: {inc_path}; "
+                 "writing the page without it")
     html.write_text(text)
     print(f"✓ wrote {html}")
 

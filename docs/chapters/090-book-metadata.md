@@ -51,6 +51,22 @@ and the whole-book `html` output embeds it near the top of the page. `print`
 ignores it: KDP takes the print cover as a separate upload, so it never belongs
 in the interior PDF. Builds that use the cover stop if the file is missing.
 
+**`html-body-end`** --- A path (relative to the book directory) to a file whose
+contents are injected *verbatim* just before `</body>` in the whole-book `html`
+output. This is the clean place for an end-of-body script --- a web-analytics
+snippet, for instance --- without editing a chapter. It is HTML only by design:
+`epub`, `pdf`, and `print` never read this key, so they stay script-free (and the
+EPUB stays valid: EPUB restricts scripting, so keeping the snippet out of it is
+what you want). The file is passed through as-is --- raw HTML and JavaScript ---
+so put a complete `<script>…</script>` there. If the file is missing, the build
+warns and produces the page normally, just without the snippet --- a mistyped
+name costs you the snippet, never the page's formatting.
+
+```
+# book_metadata.yaml
+html-body-end: analytics.html
+```
+
 ### The "Also by" page
 
 Give an `also-by:` list and book4matter adds an "Also by *Author*" page in the

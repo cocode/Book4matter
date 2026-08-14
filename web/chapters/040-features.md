@@ -32,5 +32,9 @@ instead of a blank page.
 
 ## Reproducible by design
 
-Everything lives in one pinned Docker image. No host installs, no network at
+You can run everything from a pinned Docker image. No host installs, no network at
 build time, and the same inputs produce the same outputs on any machine.
+
+If you want more control, you can install locally, or you can build the docker image locally, and run that way.
+
+
