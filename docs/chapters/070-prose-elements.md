@@ -35,6 +35,11 @@ from a superscript marker. The digital `pdf` output keeps its footnote markers
 clickable; the `print` output does not, because KDP rejects internal hyperlinks
 in print interiors.
 
+While you can put footnotes anywhere, we recommend putting them in the file where
+they are referenced. If you put all the footnotes in an otherwise empty file, 
+you may end up with a "Ghost Chapter" in the table of contents, represeting
+the empty file. This will happen with an empty file, too.
+
 ```
 Practice the rise slowly at first.[^rise]
 
