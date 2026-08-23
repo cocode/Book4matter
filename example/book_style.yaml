@@ -6,4 +6,12 @@ margins:
   bottom: 0.75
 font: Libertinus Serif
 font-size: 11pt
+
+blockquote:
+  width: 80%
+  rule-width: 50%
+  spacing: 1.25em
+  text-align: center
+  font-style: italic
+
 toc: true

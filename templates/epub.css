@@ -1,5 +1,14 @@
 @charset "utf-8";
 
+:root {
+  /* Overridden by the per-book blockquote map when one is supplied. */
+  --blockquote-width: 80%;
+  --blockquote-rule-width: 50%;
+  --blockquote-spacing: 1.25em;
+  --blockquote-text-align: center;
+  --blockquote-font-style: italic;
+}
+
 /* Body text: reader's default serif. Kindle (and most readers) will substitute
    their own face — that's fine, the user gets to choose. We only assert the
    *category* (serif), not a specific family. */
@@ -75,8 +84,31 @@ h1 .part-label {
 }
 
 blockquote {
-  margin: 1em 1.5em;
-  font-style: italic;
+  width: var(--blockquote-width);
+  max-width: none;
+  margin: var(--blockquote-spacing) auto;
+  padding: 0;
+  text-align: var(--blockquote-text-align);
+  font-style: var(--blockquote-font-style);
+}
+blockquote::before,
+blockquote::after {
+  content: "";
+  display: block;
+  width: var(--blockquote-rule-width);
+  margin-left: auto;
+  margin-right: auto;
+  border-top: 1px solid currentColor;
+}
+blockquote::before { margin-bottom: 0.8em; }
+blockquote::after  { margin-top: 0.8em; }
+blockquote p {
+  max-width: none;
+  margin: 0 0 0.6em;
+  text-align: inherit;
+}
+blockquote p:last-child {
+  margin-bottom: 0;
 }
 
 ul, ol { margin: 0.5em 0 0.5em 1.5em; }

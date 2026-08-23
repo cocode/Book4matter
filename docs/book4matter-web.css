@@ -30,6 +30,14 @@
   --code-bg:   #f1ede6;   /* inline code background   */
   --block-bg:  #f6f3ed;   /* code block background    */
 
+  /* Kept in sync with the default blockquote map in book_style.yaml. The
+     generated per-book CSS overrides these when a book supplies the map. */
+  --blockquote-width:      80%;
+  --blockquote-rule-width: 50%;
+  --blockquote-spacing:    1.25em;
+  --blockquote-text-align:  center;
+  --blockquote-font-style: italic;
+
   --serif: 'Source Serif 4', Georgia, 'Times New Roman', serif;
   --sans:  'IBM Plex Sans', system-ui, 'Segoe UI', Helvetica, sans-serif;
   --mono:  'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
@@ -319,13 +327,30 @@ pre code {
 /* ---- Blockquote ------------------------------------------------ */
 
 blockquote {
-  margin: 1.5em 0;
-  padding: 0.2em 0 0.2em 1.2em;
-  border-left: 3px solid var(--rule-2);
+  width: var(--blockquote-width);
+  max-width: none;
+  margin: var(--blockquote-spacing) auto;
+  padding: 0;
+  text-align: var(--blockquote-text-align);
   color: var(--ink-2);
-  font-style: italic;
+  font-style: var(--blockquote-font-style);
 }
-blockquote p { margin-bottom: 0.6em; }
+blockquote::before,
+blockquote::after {
+  content: "";
+  display: block;
+  width: var(--blockquote-rule-width);
+  margin-left: auto;
+  margin-right: auto;
+  border-top: 1px solid currentColor;
+}
+blockquote::before { margin-bottom: 0.8em; }
+blockquote::after  { margin-top: 0.8em; }
+blockquote p {
+  max-width: none;
+  margin-bottom: 0.6em;
+  text-align: inherit;
+}
 blockquote p:last-child { margin-bottom: 0; }
 
 /* ---- Lists ----------------------------------------------------- */

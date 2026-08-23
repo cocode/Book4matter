@@ -44,6 +44,13 @@ Customizing chapter.
 **`font-size`** --- Body text size, for example `11pt`. A bare number is read as
 points (`11` means `11pt`). Defaults to `11pt`.
 
+**`blockquote`** --- The shared appearance of ordinary Markdown blockquotes
+(`>`). `width` controls the quote measure relative to the normal text width;
+`rule-width` controls each centered rule above and below it; `spacing` is the
+vertical air around the quote; and `text-align` and `font-style` control the
+quote text. The defaults are `80%`, `50%`, `1.25em`, `center`, and `italic`.
+The same map is used by the PDF, EPUB, and HTML outputs.
+
 **`indent`** --- *PDF outputs only.* How paragraphs are indented. `all` (the
 default) indents every paragraph's first line, openers included; `standard`
 leaves the first paragraph after a heading flush and indents the rest (the

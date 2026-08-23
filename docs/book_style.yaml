@@ -24,6 +24,15 @@ heading-font: "Liberation Sans"
 # Body size.
 font-size: 11pt
 
+# Ordinary Markdown blockquotes (`>`), rendered consistently in PDF, EPUB,
+# and HTML. Percentages are relative to the normal text measure.
+blockquote:
+  width: 80%
+  rule-width: 50%
+  spacing: 1.25em
+  text-align: center
+  font-style: italic
+
 # Generate the Contents page.
 toc: true
 # Book title (verso) / chapter (recto); PDF outputs only.

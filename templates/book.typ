@@ -456,15 +456,36 @@
   }
 
   // --- Block quotes (markdown `>`, which pandoc emits as quote(block: true)):
-  // set off from the body -- slightly smaller, italic, indented both sides with
-  // air above and below. Mark quotes semantically with `>`; never hand-indent.
+  // Keep the quote semantic in the Pandoc AST and give it the same centered,
+  // inset treatment as EPUB/HTML: a short rule, centered italic text, and a
+  // second short rule. The outer block remains the full text measure so the
+  // rule width is relative to the page text width, while the inner block is
+  // the narrower quote measure.
   show quote.where(block: true): it => {
-    set text(size: 0.95em, style: "italic")
-    block(
-      above: 1.1em, below: 1.1em,
-      inset: (left: 1.6em, right: 1.6em),
-      it.body,
-    )
+    let quote-align = if meta.blockquote.text-align == "left" {
+      left
+    } else if meta.blockquote.text-align == "right" {
+      right
+    } else if meta.blockquote.text-align == "justify" {
+      // Justified paragraphs still use a left-aligned content block.
+      left
+    } else {
+      center
+    }
+    block(above: meta.blockquote.spacing, below: meta.blockquote.spacing)[
+      #align(center)[#line(length: meta.blockquote.rule-width, stroke: 0.5pt)]
+      #v(0.8em)
+      #align(center)[
+        #block(width: meta.blockquote.width)[
+          #set text(size: 0.95em, style: meta.blockquote.font-style)
+          #set par(justify: meta.blockquote.text-align == "justify",
+            first-line-indent: 0pt)
+          #align(quote-align)[#it.body]
+        ]
+      ]
+      #v(0.8em)
+      #align(center)[#line(length: meta.blockquote.rule-width, stroke: 0.5pt)]
+    ]
   }
 
   // --- Tables: book style (booktabs). Pandoc emits a full grid plus a manual

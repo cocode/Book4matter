@@ -248,6 +248,73 @@ HEADING_SIZE_ROLES = ("part", "chapter")
 # (1.6em) or absolute points (18pt). A unit is required -- see heading_sizes_typ.
 _HEADING_SIZE_RE = re.compile(r"[0-9]*\.?[0-9]+(?:em|pt)$")
 
+# Block quotes are styled by both the Typst template and the EPUB/HTML CSS.
+# Keep their shared defaults here so a book can change the measure once and
+# get the same result in all three output formats.
+BLOCKQUOTE_DEFAULTS = {
+    "width": "80%",
+    "rule-width": "50%",
+    "spacing": "1.25em",
+    "text-align": "center",
+    "font-style": "italic",
+}
+BLOCKQUOTE_KEYS = tuple(BLOCKQUOTE_DEFAULTS)
+_BLOCKQUOTE_LENGTH_RE = re.compile(
+    r"[0-9]*\.?[0-9]+(?:%|em|pt|in|cm|mm)$"
+)
+_BLOCKQUOTE_ALIGNMENTS = ("left", "center", "right", "justify")
+_BLOCKQUOTE_FONT_STYLES = ("normal", "italic")
+
+
+def blockquote_config(cfg):
+    """Validate and normalize the optional shared blockquote style map."""
+    raw = cfg.get("blockquote")
+    if raw in (None, ""):
+        raw = {}
+    if not isinstance(raw, dict):
+        die("blockquote must be a map, e.g. {width: 80%, rule-width: 50%}")
+
+    unknown = [k for k in raw if k not in BLOCKQUOTE_KEYS]
+    if unknown:
+        die(f"blockquote: unknown option(s) {unknown}; "
+            f"allowed: {list(BLOCKQUOTE_KEYS)}")
+
+    out = {**BLOCKQUOTE_DEFAULTS, **{
+        str(k): str(v).strip() for k, v in raw.items()
+    }}
+    for key in ("width", "rule-width", "spacing"):
+        if not _BLOCKQUOTE_LENGTH_RE.fullmatch(out[key]):
+            die(f"blockquote.{key} must be a length with a unit, e.g. "
+                f"80%, 1.25em, or 18pt; got {raw.get(key)!r}")
+    if out["text-align"] not in _BLOCKQUOTE_ALIGNMENTS:
+        die(f"blockquote.text-align must be one of "
+            f"{list(_BLOCKQUOTE_ALIGNMENTS)}; got {out['text-align']!r}")
+    if out["font-style"] not in _BLOCKQUOTE_FONT_STYLES:
+        die(f"blockquote.font-style must be one of "
+            f"{list(_BLOCKQUOTE_FONT_STYLES)}; got {out['font-style']!r}")
+    return out
+
+
+def blockquote_typ(cfg):
+    """Serialize the shared blockquote map as a Typst dictionary literal."""
+    bq = blockquote_config(cfg)
+    return "(" + ", ".join(f"{key}: {value if key in ('width', 'rule-width', 'spacing') else typst_str(value)}"
+                            for key, value in bq.items()) + ")"
+
+
+def blockquote_css(cfg):
+    """Return CSS variables for the shared EPUB/HTML blockquote styling."""
+    bq = blockquote_config(cfg)
+    return (
+        ":root {\n"
+        f"  --blockquote-width: {bq['width']};\n"
+        f"  --blockquote-rule-width: {bq['rule-width']};\n"
+        f"  --blockquote-spacing: {bq['spacing']};\n"
+        f"  --blockquote-text-align: {bq['text-align']};\n"
+        f"  --blockquote-font-style: {bq['font-style']};\n"
+        "}\n"
+    )
+
 
 def heading_sizes_typ(cfg):
     """Resolve book_style.yaml's optional `heading-sizes:` map into a Typst
@@ -342,6 +409,9 @@ def render_meta(cfg, pages, build_id=None, links="print", cover=None):
         # Optional per-role heading-size overrides. Empty `(:)` when unset; the
         # template falls back to each site's built-in default per role.
         f"  heading-sizes: {heading_sizes_typ(cfg)},\n"
+        # Shared BlockQuote styling used by the Typst template and by the
+        # generated CSS passed to the EPUB/HTML writers.
+        f"  blockquote: {blockquote_typ(cfg)},\n"
         f"  also-by: {render_also_by(cfg)},\n"
         f"  build-id: {build_id_typ},\n"
         # The date this build was produced, worded ("25 June 2026") for the
@@ -647,6 +717,12 @@ def build_epub(bookdir, check=True, build_id=None):
     out = bookdir / "out"
     out.mkdir(exist_ok=True)
 
+    # Pandoc embeds each --css file in the EPUB. This small generated sheet
+    # carries the book's shared blockquote values without changing the template
+    # stylesheet or introducing any markup-specific quote syntax.
+    blockquote_css_path = out / "_blockquote.css"
+    blockquote_css_path.write_text(blockquote_css(cfg))
+
     meta_path = out / "_epub_meta.yaml"
     meta_path.write_text(yaml.safe_dump(_epub_metadata(cfg, build_id=build_id),
                                         sort_keys=False, allow_unicode=True))
@@ -668,6 +744,7 @@ def build_epub(bookdir, check=True, build_id=None):
            f"--lua-filter={TEMPLATES / 'epub-wrap.lua'}",
            f"--lua-filter={TEMPLATES / 'epub-parts.lua'}",
            f"--css={TEMPLATES / 'epub.css'}",
+           f"--css={blockquote_css_path}",
            f"--metadata-file={meta_path}",
            # Chapters live in bookdir/chapters/ and reference images as
            # ../media/x; resolved from the chapters dir that becomes
@@ -695,8 +772,11 @@ def build_epub(bookdir, check=True, build_id=None):
                 f"(e.g. ~1600x2560) and point `cover:` at that.")
         cmd.insert(-2, f"--epub-cover-image={cover_path}")
 
-    run(cmd, cwd=str(bookdir), env=filter_env(cfg))
-    meta_path.unlink(missing_ok=True)
+    try:
+        run(cmd, cwd=str(bookdir), env=filter_env(cfg))
+    finally:
+        meta_path.unlink(missing_ok=True)
+        blockquote_css_path.unlink(missing_ok=True)
 
     if check:
         # epubcheck exits non-zero on errors; warnings still print but pass.
@@ -733,6 +813,11 @@ def build_html(bookdir):
     out = bookdir / "out"
     out.mkdir(exist_ok=True)
 
+    # Keep the standalone HTML output on the same configurable quote styling
+    # as the EPUB. Pandoc embeds this generated sheet along with epub.css.
+    blockquote_css_path = out / "_blockquote.css"
+    blockquote_css_path.write_text(blockquote_css(cfg))
+
     title = cfg.get("title")
     slug = slugify(title) if title else bookdir.name
     html = out / f"{slug}.html"
@@ -743,10 +828,14 @@ def build_html(bookdir):
                     f"--lua-filter={TEMPLATES / 'epub-wrap.lua'}",
                     f"--lua-filter={TEMPLATES / 'epub-parts.lua'}",
                     f"--css={TEMPLATES / 'epub.css'}", "--embed-resources",
+                    f"--css={blockquote_css_path}",
                     "--metadata", f"title={title or slug}",
                     "--metadata", f"lang={cfg.get('language', 'en')}",
                     "-o", str(html))
-    run(cmd, cwd=str(bookdir), env=filter_env(cfg))
+    try:
+        run(cmd, cwd=str(bookdir), env=filter_env(cfg))
+    finally:
+        blockquote_css_path.unlink(missing_ok=True)
     text = html.read_text()
     # Link an optional per-book stylesheet, added AFTER pandoc's embedded styles
     # so its rules win on the cascade. The file is optional: drop a book_style.css
