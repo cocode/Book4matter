@@ -10,9 +10,12 @@ A ready-to-print PDF.
 I've used this for Amazon KDP, so it follows the rules there, like "no hyperlinks".
 
 External hyperlinks are reformatted to show the URL after the anchor text. 
- Internal links are [converted to page number references](https://book4matter.com/examples/docs/book4matter.html#links-in-pdf-and-print), like
 
-    See HTML on page 37
+    Book4matter (https://www.book4matter.com)
+
+ Internal links are [converted to page number references](https://book4matter.com/examples/docs/book4matter.html#links-in-pdf-and-print)
+
+    Book4matter on page 37
 
 A table of contents is automatically generated. This PDF does not include a cover, since that is a separate upload on KDP.
 
