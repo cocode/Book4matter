@@ -15,3 +15,8 @@ margins.
 This second section exists so the table of contents has more than one entry per
 chapter. It also confirms that **bold** and *italic* survive the journey from
 Markdown all the way to the printed page.
+
+{exercise:publish Publish a test interior} --- build the `print` output and
+upload the interior PDF to a KDP draft (you need not actually publish it). Then
+look back at {exercise:build-it} to see how far you have come. In the printed
+book that reference carries the page number; on screen it is a live link.

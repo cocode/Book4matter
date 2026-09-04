@@ -49,7 +49,9 @@ local section_headers = {}
 --                     levels because it's consumed by the very next heading.
 --   `.section`     -- on H1, render the heading like an unnumbered chapter
 --                     instead of a part divider: a top-of-contents entry with
---                     no number whose body flows as ordinary text. For an
+--                     no number whose body flows as ordinary text. On H2 (a
+--                     chapter, in a book whose chapters are H2), it just means
+--                     an unnumbered chapter -- same as `.unnumbered`. For an
 --                     afterword, appendix, acknowledgments, etc.
 function Blocks(blocks)
   local out = pandoc.List()
@@ -96,7 +98,20 @@ function Blocks(blocks)
           -- an earlier `.section` (e.g. an appendix followed by a further part).
           out:insert(pandoc.RawBlock("typst", "#section-next.update(false)"))
         end
-        if (b.level == 1 or b.level == 2) and common.pop_class(b, "unnumbered") then
+        -- `.unnumbered` on a part/chapter and `.section` on an H2 chapter both
+        -- mean the same thing here: skip the auto label. An `.section` afterword
+        -- or appendix written as an H2 (a book whose chapters are H2) is simply
+        -- an unnumbered chapter -- the print equivalent of what epub-parts.lua
+        -- does, which unnumbers `.section` at any level. (H1 `.section` is
+        -- handled above as a part-like divider via section-next.)
+        local unnumbered = false
+        if b.level == 1 or b.level == 2 then
+          unnumbered = common.pop_class(b, "unnumbered")
+        end
+        if b.level == 2 and common.pop_class(b, "section") then
+          unnumbered = true
+        end
+        if unnumbered then
           out:insert(pandoc.RawBlock("typst", "#unnumbered-next.update(true)"))
         elseif b.level == 1 then
           part_count = part_count + 1

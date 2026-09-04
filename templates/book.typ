@@ -82,6 +82,96 @@
   h(0.4em)
 }
 
+// --- Tracked items: auto-numbered exercises / figures / charts, cross-refs,
+// and a back-of-book index. Driven by tracked.lua, which turns the author's
+// `{exercise:id}`, `{@exercise:id}`, and `{index:exercise}` tokens into
+// `#tdef(...)`, `#xref(...)`, and `#tindex(...)` calls in the body.
+//
+// One `counter("trk-" + kind)` per kind gives each its own 1, 2, 3... run.
+// Each anchor drops a labelled `metadata` at its spot carrying (kind, id,
+// title): the label (`trk-<kind>-<id>`) lets a cross-reference find that one
+// item, and querying every `metadata` of a kind builds the index. Page numbers
+// come from `counter(page).at(<the metadata's location>)`, the same trick the
+// contents and the print show-link rule use.
+//
+// Like runin-font / part-style, these helpers run at module scope and can't see
+// `meta`, so book() stashes what they need in states: the kind->(label:) map,
+// and whether links are live (digital pdf) or stripped for print.
+#let tracked-meta = state("tracked-meta", (:))
+#let tracked-links = state("tracked-links", false)
+
+// The display word for a kind ("Exercise"), from the registry; falls back to
+// the kind name itself if somehow unregistered (the filter already rejects
+// unknown kinds, so this is just belt-and-braces).
+#let tracked-label(kind) = tracked-meta.get().at(kind, default: (label: kind)).label
+
+// A tracked item's number prints with a leading "#" -- "Exercise #3". One place
+// so the anchor (tdef), cross-references (xref) and the index (tindex) match,
+// and the reflow filter (tracked.lua) mirrors this.
+#let tracked-num(n) = "#" + str(n)
+
+// Anchor: `{exercise:pushups}` (optionally `|Title`). Steps the kind's counter,
+// prints "Exercise 3" at this spot, and leaves a labelled metadata marker the
+// references and index read. The step precedes the context block (as part-num
+// does before a part heading), so `.get()` reads the freshly stepped value.
+#let tdef(kind, id, title: none) = {
+  counter("trk-" + kind).step()
+  context {
+    let n = counter("trk-" + kind).get().first()
+    [#tracked-label(kind) #tracked-num(n)#metadata((trk: true, kind: kind, id: id, title: title))#label("trk-" + kind + "-" + id)]
+  }
+}
+
+// Cross-reference: `{@exercise:pushups}`. Renders "Exercise 3", resolving the
+// number from the anchor's location so it can appear before or after the anchor
+// (forward references). Digital pdf: a clickable, styled internal link. Print:
+// no link annotation (KDP forbids them) -- instead the target's page, resolved
+// at render time, as "Exercise 3 (page 42)". This mirrors the generic show-link
+// rule's label branch but without its quotes, which read wrong around a number.
+// A dangling reference (no such anchor) is surfaced in red rather than hidden.
+#let xref(kind, id) = context {
+  let hits = query(label("trk-" + kind + "-" + id))
+  if hits.len() == 0 {
+    text(fill: red)[[?#kind:#id?]]
+  } else {
+    let loc = hits.first().location()
+    let body = [#tracked-label(kind) #tracked-num(counter("trk-" + kind).at(loc).first())]
+    if tracked-links.get() {
+      underline(text(fill: rgb("#1a56b0"))[#link(loc)[#body]])
+    } else {
+      [#body (page #counter(page).at(loc).first())]
+    }
+  }
+}
+
+// Back-of-book index: `{index:exercise}`. Every anchor of the kind, in
+// appearance order (query returns document order), one per line: number, an
+// optional title, and the page -- right-aligned in an `auto` column with no dot
+// leaders, matching the contents. The whole entry links to the item, so it's
+// clickable in the digital pdf and inert (just the page number) in print,
+// exactly as the contents entries behave.
+#let tindex(kind) = context {
+  let items = query(metadata).filter(m =>
+    type(m.value) == dictionary
+      and m.value.at("trk", default: false)
+      and m.value.kind == kind)
+  for m in items {
+    let loc = m.location()
+    let n = counter("trk-" + kind).at(loc).first()
+    // Fall back to the author's id when there's no title, so an entry is never a
+    // bare number -- "Exercise 1 · pushups" rather than "Exercise 1".
+    let title = m.value.title
+    let desc = if title != none and title != "" { title } else { m.value.id }
+    block(above: 0.65em, link(loc, grid(
+      columns: (1fr, auto),
+      column-gutter: 1.5em,
+      align: (left + bottom, right + bottom),
+      [#tracked-label(kind) #tracked-num(n) · #desc],
+      [#counter(page).at(loc).first()],
+    )))
+  }
+}
+
 // Spelled-out part ordinals for the contents page ("PART TWO · BASICS").
 // Books with more than twenty parts fall back to the bare numeral.
 #let part-words = ("One", "Two", "Three", "Four", "Five", "Six", "Seven",
@@ -103,6 +193,10 @@
   runin-font.update(meta.heading-font)
   // Let part-text() (module scope) know which part-page style is in force.
   part-style.update(meta.part-style)
+  // Hand the tracked-item helpers (module scope) the kind->(label:) registry
+  // and whether links are live, so tdef/xref/tindex can format without `meta`.
+  tracked-meta.update(meta.at("tracked", default: (:)))
+  tracked-links.update(meta.at("links", default: "print") == "live")
 
   // --- PDF document metadata ---
   set document(title: flat-title, author: meta.authors)
