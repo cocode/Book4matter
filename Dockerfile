@@ -7,6 +7,14 @@ FROM pandoc/typst:3.9.0.2@sha256:8b88646589ec8aa05afdca02dbe6849fa38f3235fb23559
 # `bf impose` 2-up signature imposition. (pandoc and typst already ship in the
 # base.)
 #
+# NOTE: the full openjdk17-jre, not -headless, is deliberate. epubcheck reads
+# each image's dimensions through javax.imageio, whose JPEG reader needs the
+# native libjavajpeg.so -- and Alpine ships that lib only in the full jre, not
+# the headless package. With -headless, epubcheck can't decode JPEGs and prints
+# "INFO(RSC-022): Cannot check image details (requires Java version 7 or
+# higher)" for every JPEG, silently skipping that check. The full jre costs a
+# few MB more (libjpeg-turbo, giflib, lcms2, X11/alsa deps) to make it real.
+#
 # Versions are pinned for reproducible builds, matching what Alpine 3.23
 # (the base image's release) serves. NOTE: Alpine's stable branches are
 # rolling -- when a package is updated the old -rN build is removed from the
@@ -15,12 +23,12 @@ FROM pandoc/typst:3.9.0.2@sha256:8b88646589ec8aa05afdca02dbe6849fa38f3235fb23559
 # refresh, run against the pinned base:
 #   docker run --rm --entrypoint sh <base> -c \
 #     'apk add --no-cache --simulate python3 py3-yaml font-liberation \
-#        openjdk17-jre-headless unzip py3-pypdf | grep Installing'
+#        openjdk17-jre unzip py3-pypdf | grep Installing'
 RUN apk add --no-cache \
-      python3=3.12.13-r0 \
+      python3=3.12.14-r0 \
       py3-yaml=6.0.3-r0 \
       font-liberation=2.1.5-r2 \
-      openjdk17-jre-headless=17.0.20_p8-r0 \
+      openjdk17-jre=17.0.20_p8-r0 \
       unzip=6.0-r16 \
       py3-pypdf=6.4.0-r0
 
@@ -44,7 +52,7 @@ RUN cd /opt && \
     unzip -q /tmp/epubcheck.zip && \
     rm /tmp/epubcheck.zip && \
     ln -s "/opt/epubcheck-${EPUBCHECK_VERSION}/epubcheck.jar" /opt/epubcheck.jar && \
-    printf '#!/bin/sh\nexec java -jar /opt/epubcheck.jar "$@"\n' > /usr/local/bin/epubcheck && \
+    printf '#!/bin/sh\nexec java -Djava.awt.headless=true -jar /opt/epubcheck.jar "$@"\n' > /usr/local/bin/epubcheck && \
     chmod +x /usr/local/bin/epubcheck
 
 COPY bf /opt/bf
