@@ -113,6 +113,45 @@ else
   failed+=("example (impose)")
 fi
 
+# Tracked items (auto-numbered exercises/figures, cross-references, back-index).
+# A print-only feature, so it is checked here rather than in the epub/html loops.
+# Positive: the tracked fixture builds a print interior (exercising tracked.lua's
+# whole-book reference check plus #tdef/#xref/#tindex in typst). Negative: a book
+# with a reference to an undefined item must FAIL the build, not print silently.
+printf '\n\033[1m== tests/tracked (print) ==\033[0m\n'
+if ( cd tests/tracked && "$ROOT/run.sh" print >/dev/null 2>&1 &&
+     ls out/*-interior.pdf >/dev/null 2>&1 ); then
+  echo "  ok: tracked interior built"
+  pass=$((pass + 1))
+else
+  echo "  FAIL: tracked interior build failed"
+  fail=$((fail + 1))
+  failed+=("tests/tracked (print)")
+fi
+
+printf '\n\033[1m== tests/tracked (dangling reference must fail) ==\033[0m\n'
+if (
+  # Under $ROOT so it sits inside Docker's shared mount (a /tmp dir may not be).
+  dangle="$ROOT/tests/.dangle.$$"
+  trap 'rm -rf "$dangle"' EXIT
+  rm -rf "$dangle"
+  mkdir -p "$dangle/chapters"
+  cp tests/tracked/book_style.yaml tests/tracked/book_metadata.yaml "$dangle/"
+  printf '# Ch\n\nA reference to {exercise:missing} that is never defined.\n' \
+    > "$dangle/chapters/01.md"
+  # Expect a NON-zero exit: the build must stop on the undefined reference.
+  if ( cd "$dangle" && "$ROOT/run.sh" print >/dev/null 2>&1 ); then
+    echo "  FAIL: build succeeded despite a dangling reference"
+    exit 1
+  fi
+  echo "  ok: dangling reference stopped the build"
+); then
+  pass=$((pass + 1))
+else
+  fail=$((fail + 1))
+  failed+=("tests/tracked (dangling)")
+fi
+
 printf '\n=========================================\n'
 printf '  passed: %d\n  failed: %d\n' "$pass" "$fail"
 if (( fail > 0 )); then

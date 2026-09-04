@@ -121,6 +121,30 @@ A standalone image (alone in its paragraph) understands a couple of classes:
 
 Size with `{width="3in"}` (and an optional `height="…"`).
 
+## Numbered items, cross-references & lists
+
+Exercises, figures, charts, tables — anything you number and refer to — can be
+auto-numbered so inserting or reordering never breaks a number or a reference.
+Register the kinds you use in `book_metadata.yaml`:
+
+```yaml
+tracked:
+  exercise: { label: "Exercise" }
+  figure:   { label: "Figure" }
+```
+
+Then, in your chapters:
+
+- `{exercise:pushups:def}` — **define** an item (prints "Exercise 3"); a space
+  adds a title for the list, e.g. `{exercise:pushups Push-ups to failure}`.
+- `{exercise:pushups}` — **refer** to it by name, never by number. In digital
+  outputs it's a live link; in print it becomes "Exercise 3 (page 42)".
+- `{index:exercise}` — on its own line, print the **list** of all exercises
+  with page numbers (a "List of Exercises"), wherever you place it.
+
+Each kind is numbered independently. A reference to an undefined item stops the
+build. See the documentation for the full details.
+
 ## Page furniture
 
 - **Folios.** Front matter is numbered in lowercase roman (i, ii, …),

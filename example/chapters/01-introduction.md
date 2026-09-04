@@ -24,6 +24,15 @@ And the same content as an ordered list:
 2. Run the build.
 3. Upload the interior PDF to KDP.
 
+Ready to try it? {exercise:build-it Build this book} --- clone the repository,
+run the build, and open the PDF. You will do the fuller version in
+{exercise:publish} at the end of the next chapter.
+
+Exercises like the one above are numbered automatically, and every one is
+collected in the *List of Exercises* at the back. Notice that the reference to
+{exercise:publish} already knows its number, even though we have not reached it
+yet.
+
 > A blockquote, for those moments when a book wants to quote itself.
 
 [^1]: Footnotes land at the foot of the page, where they belong.

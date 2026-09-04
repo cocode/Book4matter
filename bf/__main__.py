@@ -43,8 +43,12 @@ MAIN_TYP = '''#import "book.typ": book
 # book.typ is copied into out/ alongside _body.typ, so the relative import
 # resolves.
 BODY_PRELUDE = '''#import "@preview/wrap-it:0.1.1": wrap-content
-#import "book.typ": part-num, unnumbered-next, section-next, part-text, part-text-next, runin
+#import "book.typ": part-num, unnumbered-next, section-next, part-text, part-text-next, runin, tdef, xref, tindex
 '''
+
+
+# Set from --verbose in main(); when true, run() echoes each child's full argv.
+VERBOSE = False
 
 
 def die(msg):
@@ -91,7 +95,14 @@ def read_text_icloud(path):
 
 
 def run(cmd, **kw):
-    print("· " + " ".join(str(c) for c in cmd), file=sys.stderr)
+    # Announce the step by tool name only. The full argv (e.g. pandoc's 30+
+    # temp-chapter paths) is noise that buries any error the child prints, and
+    # the temp names aren't reproducible anyway. --verbose brings the full
+    # command back for when you do need to reproduce a child invocation.
+    if VERBOSE:
+        print("· " + " ".join(str(c) for c in cmd), file=sys.stderr)
+    else:
+        print("· " + Path(cmd[0]).name, file=sys.stderr)
     try:
         subprocess.run(cmd, check=True, **kw)
     except subprocess.CalledProcessError as e:
@@ -104,11 +115,39 @@ def run(cmd, **kw):
         raise
 
 
+def tracked_env(cfg):
+    """Registry for tracked.lua as a 'kind=Label;kind=Label' string, e.g.
+    'exercise=Exercise;figure=Figure'. Validated like tracked_kinds(); a labelless
+    kind falls back to its capitalized name. Empty when the book tracks nothing."""
+    raw = cfg.get("tracked")
+    if raw in (None, ""):
+        return ""
+    tracked_kinds(cfg)  # validate kind names / reserved words (raises on error)
+    pairs = []
+    for kind, spec in raw.items():
+        if spec is None:
+            spec = {}
+        elif isinstance(spec, str):
+            spec = {"label": spec}
+        label = (spec.get("label") if isinstance(spec, dict) else None) \
+            or str(kind).capitalize()
+        pairs.append(f"{kind}={label}")
+    return ";".join(pairs)
+
+
+def tracked_env_vars(cfg, mode):
+    """The two env vars tracked.lua reads: the registry and the output mode
+    ("print" -> raw typst; "reflow" -> pandoc-native for EPUB/HTML)."""
+    return {"BF_TRACKED": tracked_env(cfg), "BF_TRACKED_MODE": mode}
+
+
 def filter_env(cfg):
     """Environment for the EPUB/HTML pandoc lua filters. Carries `part-label`
     (default "Part") via BF_PART_LABEL so epub-parts.lua's auto "Part N" labels
-    match whatever the book calls its top-level division on the print divider."""
-    return {**os.environ, "BF_PART_LABEL": str(cfg.get("part-label", "Part"))}
+    match whatever the book calls its top-level division on the print divider,
+    plus the tracked-item registry in reflow mode (see tracked.lua)."""
+    return {**os.environ, "BF_PART_LABEL": str(cfg.get("part-label", "Part")),
+            **tracked_env_vars(cfg, "reflow")}
 
 
 def typst_str(s):
@@ -349,6 +388,67 @@ def heading_sizes_typ(cfg):
     return "(" + ", ".join(parts) + ")" if parts else "(:)"
 
 
+# Matches a tracked-item kind name -- the `exercise` in `{exercise:id}`. Kept to
+# lowercase letters/digits/hyphens so the token grammar stays unambiguous (the
+# tracked.lua filter splits on `:` and `|`, which a kind must therefore avoid).
+_TRACKED_KIND_RE = re.compile(r"[a-z][a-z0-9-]*")
+
+
+def tracked_kinds(cfg):
+    """The list of registered tracked-item kinds, in declaration order.
+
+    These double as the tokens tracked.lua recognises (`{exercise:id}`,
+    `{@exercise:id}`, `{index:exercise}`); the filter is handed this list so an
+    unregistered kind in the text is a build error rather than a silently
+    invented category (which is what guards against a typo like `{figurse:x}`)."""
+    raw = cfg.get("tracked")
+    if raw in (None, ""):
+        return []
+    if not isinstance(raw, dict):
+        die('tracked must be a map, e.g. {exercise: {label: "Exercise"}}')
+    kinds = []
+    for kind in raw:
+        if not _TRACKED_KIND_RE.fullmatch(str(kind)):
+            die(f"tracked: kind {kind!r} must be lowercase letters, digits, or "
+                "hyphens (it becomes the {kind:id} token)")
+        if str(kind) == "index":
+            die("tracked: 'index' is reserved -- it names the back-of-book list "
+                "placeholder {index:kind}, so it can't also be a kind")
+        kinds.append(str(kind))
+    return kinds
+
+
+def tracked_typ(cfg):
+    """Serialize book_metadata.yaml's optional `tracked:` map into a Typst
+    dictionary literal for the meta block, e.g.
+    `(exercise: (label: "Exercise"), figure: (label: "Figure"))`.
+
+    Each key is a tracked-item kind and each value carries its display label --
+    the word book.typ prints before the auto number ("Exercise 3") and heads the
+    back-of-book index with. A bare string value is shorthand for its label; an
+    omitted label defaults to the capitalized kind. Empty `(:)` when unset, so a
+    book that tracks nothing is unchanged."""
+    raw = cfg.get("tracked")
+    if raw in (None, ""):
+        return "(:)"
+    if not isinstance(raw, dict):
+        die('tracked must be a map, e.g. {exercise: {label: "Exercise"}}')
+    parts = []
+    for kind, spec in raw.items():
+        # Kind-name syntax is validated in tracked_kinds(); call it for effect.
+        tracked_kinds({"tracked": {kind: spec}})
+        if spec is None:
+            spec = {}
+        elif isinstance(spec, str):
+            spec = {"label": spec}
+        if not isinstance(spec, dict):
+            die(f"tracked.{kind} must be a map (e.g. {{label: \"Figure\"}}) or a "
+                "label string")
+        label = spec.get("label") or str(kind).capitalize()
+        parts.append(f"{kind}: (label: {typst_str(label)})")
+    return "(" + ", ".join(parts) + ")"
+
+
 def render_meta(cfg, pages, build_id=None, links="print", cover=None):
     w, h = parse_trim(cfg)
     inside, outside, top, bottom = resolve_margins(cfg, pages)
@@ -422,6 +522,10 @@ def render_meta(cfg, pages, build_id=None, links="print", cover=None):
         # annotations. book.typ's show-link rule reads this.
         f"  links: {typst_str(links)},\n"
         f"  cover: {cover_typ},\n"
+        # Registered tracked-item kinds (auto-numbered exercises/figures/charts
+        # and their back-of-book index), keyed by kind -> (label:). Empty `(:)`
+        # when the book tracks nothing. book.typ's tdef/xref/tindex read it.
+        f"  tracked: {tracked_typ(cfg)},\n"
         ")\n"
     )
 
@@ -622,6 +726,11 @@ def build_print(bookdir, pages=None, keep=False, build_id=None, links="print",
         # the front-matter→arabic reset (see its Pandoc filter); an env var is
         # the simplest way to pass a config flag into a lua filter.
         env = {**os.environ, "BF_PARTS_RECTO": "1" if cfg.get("parts-recto") else "0"}
+        # tracked.lua reads the registry (which `{kind:id}` tokens are real vs.
+        # ordinary prose) and its output mode. Print builds emit raw typst and let
+        # book.typ (which gets the same registry via meta.tracked) do the
+        # numbering; empty registry -> the filter no-ops.
+        env.update(tracked_env_vars(cfg, "print"))
         # Internal links are handled entirely by book.typ's show-link rule now:
         # in the print build it turns each one into `See "text" on page N`
         # (resolving the target's page -- only typst knows it), and in the
@@ -629,11 +738,15 @@ def build_print(bookdir, pages=None, keep=False, build_id=None, links="print",
         # leave internal links in the AST for both targets rather than stripping
         # them for print. External links were never touched here.
         filters = []
-        # wrap.lua first so it packages its body before parts.lua starts
-        # inserting raw `#pagebreak()` blocks between sibling headings; if
-        # the order were reversed, a pagebreak would land inside a wrap
-        # body and typst rejects pagebreaks inside content blocks.
+        # tracked.lua first, so `{kind:id}` tokens sitting inside a wrap body are
+        # rewritten to #tdef/#xref/#tindex before wrap.lua serializes that body
+        # to raw typst (after which its inner text is opaque to later filters).
+        # wrap.lua then runs before parts.lua so it packages its body before
+        # parts.lua starts inserting raw `#pagebreak()` blocks between sibling
+        # headings; reversed, a pagebreak would land inside a wrap body and typst
+        # rejects pagebreaks inside content blocks.
         filters.extend([
+            f"--lua-filter={TEMPLATES / 'tracked.lua'}",
             f"--lua-filter={TEMPLATES / 'wrap.lua'}",
             f"--lua-filter={TEMPLATES / 'parts.lua'}",
         ])
@@ -737,10 +850,13 @@ def build_epub(bookdir, check=True, build_id=None):
            # toc-depth from book_style.yaml (default 2 -> parts + chapters);
            # deeper headings stay in-document but don't clutter the nav.
            "--toc", f"--toc-depth={int(cfg.get('toc-depth', 2))}",
-           # epub-wrap rewrites .wrap-right/.wrap-left images into <figure>s
-           # with the class on the figure (CSS does the float). epub-parts
-           # splits "Part I - Title" headings into two lines and strips
+           # tracked.lua (reflow mode) first: turn {kind:id} tokens into numbered
+           # spans/links and expand {index:kind}, before epub-wrap packages any
+           # wrap bodies. epub-wrap rewrites .wrap-right/.wrap-left images into
+           # <figure>s with the class on the figure (CSS does the float).
+           # epub-parts splits "Part I - Title" headings into two lines and strips
            # print-only heading classes that would otherwise leak into HTML.
+           f"--lua-filter={TEMPLATES / 'tracked.lua'}",
            f"--lua-filter={TEMPLATES / 'epub-wrap.lua'}",
            f"--lua-filter={TEMPLATES / 'epub-parts.lua'}",
            f"--css={TEMPLATES / 'epub.css'}",
@@ -825,6 +941,7 @@ def build_html(bookdir):
     cmd = _html_cmd(chapters, bookdir,
                     "--standalone", "--section-divs",
                     "--toc", f"--toc-depth={int(cfg.get('toc-depth', 2))}",
+                    f"--lua-filter={TEMPLATES / 'tracked.lua'}",
                     f"--lua-filter={TEMPLATES / 'epub-wrap.lua'}",
                     f"--lua-filter={TEMPLATES / 'epub-parts.lua'}",
                     f"--css={TEMPLATES / 'epub.css'}", "--embed-resources",
@@ -1252,11 +1369,19 @@ def impose_pdf(inp, paper="letter", signature=4, single=False,
 # ------------------------------------------------------------------------ cli
 
 def main(argv=None):
+    # --verbose is shared by every subcommand via parents=[common], so it goes
+    # after the subcommand (e.g. `bf all --verbose`), matching --keep and the
+    # other per-command flags.
+    common = argparse.ArgumentParser(add_help=False)
+    common.add_argument("-v", "--verbose", action="store_true",
+                        help="echo each child command with its full arguments")
+
     p = argparse.ArgumentParser(prog="bf",
                                 description="Markdown -> KDP print-ready PDF")
     sub = p.add_subparsers(dest="cmd", required=True)
 
-    b = sub.add_parser("print", help="build interior PDF from a book directory")
+    b = sub.add_parser("print", parents=[common],
+                       help="build interior PDF from a book directory")
     b.add_argument("bookdir", nargs="?", default=".",
                    help="book directory (contains book_*.yaml and chapters/)")
     b.add_argument("--pages", type=int, default=None,
@@ -1269,7 +1394,7 @@ def main(argv=None):
     b.add_argument("--build-id", default=None,
                    help="printing identifier (e.g. git short hash) shown on copyright page")
 
-    d = sub.add_parser("pdf",
+    d = sub.add_parser("pdf", parents=[common],
                        help="build a digital PDF (same as print, but TOC and "
                             "footnote links stay clickable)")
     d.add_argument("bookdir", nargs="?", default=".",
@@ -1284,7 +1409,7 @@ def main(argv=None):
     d.add_argument("--build-id", default=None,
                    help="printing identifier (e.g. git short hash) shown on copyright page")
 
-    a = sub.add_parser("all",
+    a = sub.add_parser("all", parents=[common],
                        help="build everything in one run: interior PDF (print), "
                             "digital PDF, EPUB, and HTML")
     a.add_argument("bookdir", nargs="?", default=".",
@@ -1301,7 +1426,8 @@ def main(argv=None):
     a.add_argument("--build-id", default=None,
                    help="printing identifier (e.g. git short hash) shown on copyright page")
 
-    e = sub.add_parser("epub", help="build an EPUB3 from a book directory")
+    e = sub.add_parser("epub", parents=[common],
+                       help="build an EPUB3 from a book directory")
     e.add_argument("bookdir", nargs="?", default=".",
                    help="book directory (contains book_*.yaml and chapters/)")
     e.add_argument("--no-check", dest="check", action="store_false",
@@ -1309,7 +1435,7 @@ def main(argv=None):
     e.add_argument("--build-id", default=None,
                    help="printing identifier appended to rights metadata")
 
-    h = sub.add_parser("html",
+    h = sub.add_parser("html", parents=[common],
                        help="build HTML: whole book, just the TOC, or one chapter")
     h.add_argument("mode", nargs="?", default=None,
                    help="'toc' for a link-free table of contents, 'chapter' for "
@@ -1321,7 +1447,8 @@ def main(argv=None):
                    help="accepted for wrapper parity (build.sh stamps every "
                         "build); not stamped on web output")
 
-    i = sub.add_parser("import", help="import a .docx into chapters/*.md")
+    i = sub.add_parser("import", parents=[common],
+                       help="import a .docx into chapters/*.md")
     i.add_argument("docx", help="path to the .docx file")
     i.add_argument("bookdir", nargs="?", default=".", help="target book directory")
     i.add_argument("--no-split", dest="split", action="store_false",
@@ -1329,7 +1456,7 @@ def main(argv=None):
     i.add_argument("--force", action="store_true",
                    help="overwrite an existing non-empty chapters/ directory")
 
-    m = sub.add_parser("impose",
+    m = sub.add_parser("impose", parents=[common],
                        help="impose a PDF 2-up into printable signatures for "
                             "folding and hand binding")
     m.add_argument("input", help="path to the PDF to impose (e.g. an interior)")
@@ -1348,6 +1475,8 @@ def main(argv=None):
                         "default: <input>-signatures.pdf")
 
     args = p.parse_args(argv)
+    global VERBOSE
+    VERBOSE = args.verbose
     if args.cmd == "print":
         build_print(Path(args.bookdir), pages=args.pages, keep=args.keep,
                     build_id=args.build_id, links="print", include_cover=False,
@@ -1388,4 +1517,13 @@ def main(argv=None):
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except subprocess.CalledProcessError as e:
+        # The child (pandoc/typst/...) already printed the real error to stderr;
+        # its own message is what matters here, not a Python stack trace ending
+        # in a huge CalledProcessError repr of the whole command. Report the
+        # failure in one line and exit. Any other uncaught exception is an
+        # unexpected bug, so it keeps its full traceback.
+        die(f"{Path(e.cmd[0]).name} failed (exit {e.returncode}); "
+            f"see the error above")

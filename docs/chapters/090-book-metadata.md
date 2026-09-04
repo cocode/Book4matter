@@ -84,6 +84,24 @@ also-by:
   - "An Earlier Work"
 ```
 
+### Tracked items
+
+`tracked:` registers the kinds of thing book4matter auto-numbers, cross-references,
+and can list --- exercises, figures, charts, tables, whatever you use. Each kind
+maps to a `label`, the word printed before the number (*Exercise 3*) and heading
+its list. A bare string is shorthand for the label.
+
+```
+tracked:
+  exercise: { label: "Exercise" }
+  figure:   { label: "Figure" }
+  chart: "Chart"
+```
+
+Omit the key and nothing is tracked. How to write the `{...}` tokens themselves
+--- defining items, referring to them, and placing a list --- is covered in the
+*Auto-Numbering, Cross-References, and Lists* chapter.
+
 ### Listing chapters explicitly
 
 By default every file in `chapters/` is built, in natural filename order. To fix
