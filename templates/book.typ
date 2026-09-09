@@ -566,19 +566,28 @@
     } else {
       center
     }
-    block(above: meta.blockquote.spacing, below: meta.blockquote.spacing)[
-      #align(center)[#line(length: meta.blockquote.rule-width, stroke: 0.5pt)]
-      #v(0.8em)
-      #align(center)[
-        #block(width: meta.blockquote.width)[
-          #set text(size: 0.95em, style: meta.blockquote.font-style)
-          #set par(justify: meta.blockquote.text-align == "justify",
-            first-line-indent: 0pt)
-          #align(quote-align)[#it.body]
+    // The gap between each rule and the quote text. Set explicitly on the
+    // blocks that face each other (adjacent block spacing resolves to the max
+    // of the two facing values, not their sum) so the rules sit exactly one
+    // line from the text, with no implicit block spacing stacking on top.
+    let rule-gap = 1em
+    block(width: 100%, above: meta.blockquote.spacing, below: meta.blockquote.spacing)[
+      #block(width: 100%, above: 0pt, below: rule-gap)[
+        #align(center)[#line(length: meta.blockquote.rule-width, stroke: 0.5pt)]
+      ]
+      #block(width: 100%, above: rule-gap, below: rule-gap)[
+        #align(center)[
+          #block(width: meta.blockquote.width)[
+            #set text(size: 0.95em, style: meta.blockquote.font-style)
+            #set par(justify: meta.blockquote.text-align == "justify",
+              first-line-indent: 0pt)
+            #align(quote-align)[#it.body]
+          ]
         ]
       ]
-      #v(0.8em)
-      #align(center)[#line(length: meta.blockquote.rule-width, stroke: 0.5pt)]
+      #block(width: 100%, above: rule-gap, below: 0pt)[
+        #align(center)[#line(length: meta.blockquote.rule-width, stroke: 0.5pt)]
+      ]
     ]
   }
 
