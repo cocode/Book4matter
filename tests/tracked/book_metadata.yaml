@@ -1,0 +1,11 @@
+title: Tracked Items Probe
+subtitle: Auto-numbered exercises, figures, and their back-of-book index
+author: Test Harness
+year: 2026
+language: en
+
+# The registry: which kinds are tracked, and the word printed before the number
+# ("Exercise 3") and heading the back-of-book index.
+tracked:
+  exercise: { label: "Exercise" }
+  figure:   { label: "Figure" }
