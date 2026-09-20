@@ -3,7 +3,7 @@
 Runs inside the pandoc/typst Docker image. Subcommands:
 
     bf print  [bookdir] [--pages N] [--keep]
-    bf all    [bookdir]                 (print + digital PDF + epub + html)
+    bf all    [bookdir]                 (print + digital PDF + html + epub)
     bf epub   [bookdir] [--no-check]
     bf html   [bookdir]                 (whole book as one HTML page)
     bf html toc [bookdir]               (just the contents, no links)
@@ -690,6 +690,7 @@ def build_print(bookdir, pages=None, keep=False, build_id=None, links="print",
     The digital `pdf` build sets it; the print interior leaves it off, since KDP
     takes the cover as a separate upload.
     """
+    print("print" if links == "print" else "pdf", file=sys.stderr, flush=True)
     bookdir = bookdir.resolve()
     cfg = load_config(bookdir)
     chapters = resolve_chapters(bookdir, cfg)
@@ -822,6 +823,7 @@ def _epub_metadata(cfg, build_id=None):
 
 
 def build_epub(bookdir, check=True, build_id=None):
+    print("EPUB", file=sys.stderr, flush=True)
     bookdir = bookdir.resolve()
     cfg = load_config(bookdir)
     chapters = resolve_chapters(bookdir, cfg)
@@ -921,6 +923,7 @@ def build_html(bookdir):
     contents. Mirrors the EPUB pipeline (same wrap/parts filters and CSS) but
     targets html5; --section-divs gives every heading a section id so the --toc
     entries link to it. Resources are embedded so the file stands on its own."""
+    print("HTML", file=sys.stderr, flush=True)
     bookdir = bookdir.resolve()
     cfg = load_config(bookdir)
     chapters = resolve_chapters(bookdir, cfg)
@@ -1010,6 +1013,7 @@ def build_html_toc(bookdir):
     on a website (the in-book anchors point nowhere off-site, so toc-list.lua
     drops them). Level-1 headings sit at the top level with level-2 headings
     nested beneath -- the same depth the EPUB/print contents use."""
+    print("HTML TOC", file=sys.stderr, flush=True)
     bookdir = bookdir.resolve()
     cfg = load_config(bookdir)
     chapters = resolve_chapters(bookdir, cfg)
@@ -1053,6 +1057,7 @@ def build_html_chapter(bookdir, which):
     """One chapter as an HTML fragment (no page chrome, no auto Part/Chapter
     label -- that numbering is meaningless out of context). Handy for pulling a
     single chapter into a web page."""
+    print(f"HTML chapter {which}", file=sys.stderr, flush=True)
     bookdir = bookdir.resolve()
     cfg = load_config(bookdir)
     chapters = resolve_chapters(bookdir, cfg)
@@ -1411,7 +1416,7 @@ def main(argv=None):
 
     a = sub.add_parser("all", parents=[common],
                        help="build everything in one run: interior PDF (print), "
-                            "digital PDF, EPUB, and HTML")
+                            "digital PDF, HTML, and EPUB")
     a.add_argument("bookdir", nargs="?", default=".",
                    help="book directory (contains book_*.yaml and chapters/)")
     a.add_argument("--pages", type=int, default=None,
@@ -1493,8 +1498,8 @@ def main(argv=None):
         build_print(bd, pages=args.pages, keep=args.keep,
                     build_id=args.build_id, links="live", include_cover=True,
                     no_parts=args.no_parts)
-        build_epub(bd, check=args.check, build_id=args.build_id)
         build_html(bd)
+        build_epub(bd, check=args.check, build_id=args.build_id)
     elif args.cmd == "epub":
         build_epub(Path(args.bookdir), check=args.check, build_id=args.build_id)
     elif args.cmd == "html":
