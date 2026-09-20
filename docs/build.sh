@@ -7,7 +7,7 @@
 # that produced it.
 #
 # Usage:
-#   Build print + epub + html:
+#   Build print + pdf + html + epub:
 #     docs/build.sh
 #   Build only the given format(s):
 #     docs/build.sh print
@@ -20,11 +20,11 @@ ROOT="$(cd "$HERE/.." && pwd)"
 # changes, so a stamped build is never mistaken for a clean-commit build.
 BUILD_ID="$(git -C "$ROOT" rev-parse --short=10 HEAD 2>/dev/null || echo unknown)"
 if [[ "$BUILD_ID" != "unknown" ]] && ! git -C "$ROOT" diff --quiet HEAD -- 2>/dev/null; then
-  BUILD_ID="${BUILD_ID}-dirty"
+  BUILD_ID="${BUILD_ID}-uncommited_changes"
 fi
 echo "build-id: $BUILD_ID" >&2
 
-formats=(print epub html)
+formats=(print pdf html epub)
 [[ "$#" -gt 0 ]] && formats=("$@")
 
 cd "$ROOT"
