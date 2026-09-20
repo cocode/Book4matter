@@ -43,7 +43,7 @@ jobs:
       TYPST_VERSION: "0.14.2"
       WRAP_IT_VERSION: "0.1.1"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
 
       - name: Install pandoc
         run: |
