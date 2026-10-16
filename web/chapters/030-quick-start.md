@@ -15,6 +15,8 @@ Pull the image from Docker Hub:
 
     docker pull book4matter/book4matter
 
+You can see the entry for book4matter on [docker hub ](https://hub.docker.com/r/book4matter/book4matter).
+
 ## Make a book
 
 A book is just a directory:
