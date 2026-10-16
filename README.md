@@ -15,6 +15,18 @@ Using Markdown rather than plain text will give you more control of the output, 
 
 Book4matter is a command line tool, for now, so it's probably best for people that are comfortable with that.
 
+## Docker Build
+
+This project is built on docker, for security/isolation. There is no reason it could not just be run locally, but our examples use the provided ./run.sh which expects docker to be installed.
+
+You can get the latest docker image with:
+
+```
+docker pull book4matter/book4matter
+```
+
+We are working on a webapp version, which will require no install.
+
 ## Documentation
 
 Full documentation is available in ./docs. The documentation is, of course, formatted with 
@@ -51,9 +63,7 @@ This produces
 - `out/book-title-interior.pdf` — the build output.
 
 
-## Docker Build
 
-This project is built on docker, for security/isolation. There is no reason it could not just be run locally. We are working on a webapp version.
 
 ## Usage
 
