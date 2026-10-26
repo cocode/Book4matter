@@ -14,6 +14,7 @@ Runs inside the pandoc/typst Docker image. Subcommands:
 import argparse
 import base64
 import errno
+import json
 import mimetypes
 import os
 import re
@@ -23,7 +24,9 @@ import subprocess
 import sys
 import tempfile
 import zlib
+import zipfile
 from datetime import date
+from html.parser import HTMLParser
 from pathlib import Path
 
 import yaml
@@ -43,7 +46,7 @@ MAIN_TYP = '''#import "book.typ": book
 # book.typ is copied into out/ alongside _body.typ, so the relative import
 # resolves.
 BODY_PRELUDE = '''#import "@preview/wrap-it:0.1.1": wrap-content
-#import "book.typ": part-num, unnumbered-next, section-next, part-text, part-text-next, runin, tdef, xref, tindex
+#import "book.typ": part-num, unnumbered-next, section-next, part-text, part-text-next, runin, tdef, xref, tindex, termdef, termindex
 '''
 
 
@@ -135,19 +138,23 @@ def tracked_env(cfg):
     return ";".join(pairs)
 
 
-def tracked_env_vars(cfg, mode):
+def tracked_env_vars(cfg, mode, chapters=None):
     """The two env vars tracked.lua reads: the registry and the output mode
     ("print" -> raw typst; "reflow" -> pandoc-native for EPUB/HTML)."""
-    return {"BF_TRACKED": tracked_env(cfg), "BF_TRACKED_MODE": mode}
+    env = {"BF_TRACKED": tracked_env(cfg), "BF_TRACKED_MODE": mode}
+    if chapters is not None:
+        # Original paths, since print feeds Pandoc rewritten temporary files.
+        env["BF_TRACKED_SOURCES"] = json.dumps([str(p.resolve()) for p in chapters])
+    return env
 
 
-def filter_env(cfg):
+def filter_env(cfg, chapters=None):
     """Environment for the EPUB/HTML pandoc lua filters. Carries `part-label`
     (default "Part") via BF_PART_LABEL so epub-parts.lua's auto "Part N" labels
     match whatever the book calls its top-level division on the print divider,
     plus the tracked-item registry in reflow mode (see tracked.lua)."""
     return {**os.environ, "BF_PART_LABEL": str(cfg.get("part-label", "Part")),
-            **tracked_env_vars(cfg, "reflow")}
+            **tracked_env_vars(cfg, "reflow", chapters)}
 
 
 def typst_str(s):
@@ -411,6 +418,8 @@ def tracked_kinds(cfg):
         if not _TRACKED_KIND_RE.fullmatch(str(kind)):
             die(f"tracked: kind {kind!r} must be lowercase letters, digits, or "
                 "hyphens (it becomes the {kind:id} token)")
+        if str(kind) == "term":
+            die("tracked: 'term' is reserved for [[term]] definitions and {index:term}")
         if str(kind) == "index":
             die("tracked: 'index' is reserved -- it names the back-of-book list "
                 "placeholder {index:kind}, so it can't also be a kind")
@@ -731,7 +740,7 @@ def build_print(bookdir, pages=None, keep=False, build_id=None, links="print",
         # ordinary prose) and its output mode. Print builds emit raw typst and let
         # book.typ (which gets the same registry via meta.tracked) do the
         # numbering; empty registry -> the filter no-ops.
-        env.update(tracked_env_vars(cfg, "print"))
+        env.update(tracked_env_vars(cfg, "print", chapters))
         # Internal links are handled entirely by book.typ's show-link rule now:
         # in the print build it turns each one into `See "text" on page N`
         # (resolving the target's page -- only typst knows it), and in the
@@ -822,6 +831,84 @@ def _epub_metadata(cfg, build_id=None):
     return meta
 
 
+def strip_index_ids_from_navigation(text):
+    """Pandoc copies heading spans into navigation; only the body owns IDs."""
+    def clean_nav(match):
+        return re.sub(r'\s+id="idx-[^"]*"', '', match.group(0))
+    return re.sub(r'<nav\b[^>]*>.*?</nav\s*>', clean_nav, text,
+                  flags=re.DOTALL | re.IGNORECASE)
+
+
+def validate_index_anchors(documents):
+    """Index definition IDs are unique across a book and never owned by a TOC.
+
+    documents is an iterable of (display path, HTML/XHTML text) pairs. EPUB
+    validates all content files together, so chapter splitting cannot hide a
+    duplicate definition ID. Report generated-file line numbers for diagnosis.
+    """
+    anchors = {}
+
+    class IndexAnchors(HTMLParser):
+        def __init__(self, source):
+            super().__init__()
+            self.source = source
+            self.nav_depth = 0
+
+        def handle_starttag(self, tag, attrs):
+            if tag == 'nav':
+                self.nav_depth += 1
+            for name, value in attrs:
+                if name == 'id' and value and value.startswith('idx-'):
+                    anchors.setdefault(value, []).append(
+                        (f"{self.source}:{self.getpos()[0]}", bool(self.nav_depth)))
+
+        def handle_startendtag(self, tag, attrs):
+            self.handle_starttag(tag, attrs)
+            self.handle_endtag(tag)
+
+        def handle_endtag(self, tag):
+            if tag == 'nav':
+                self.nav_depth = max(0, self.nav_depth - 1)
+
+    for source, text in documents:
+        parser = IndexAnchors(source)
+        parser.feed(text)
+        parser.close()
+
+    errors = []
+    for anchor, occurrences in anchors.items():
+        if len(occurrences) > 1 or any(nav for _, nav in occurrences):
+            reason = 'duplicate index definition anchor' if len(occurrences) > 1 else 'index definition anchor in navigation'
+            locations = ', '.join(path + (' (navigation/TOC)' if nav else '')
+                                  for path, nav in occurrences)
+            errors.append(f"{reason} '{anchor}': {locations}")
+    if errors:
+        die("index anchor validation failed:\n  " + "\n  ".join(errors))
+
+
+def clean_epub_index_navigation(epub):
+    """Preserve ZIP order/metadata, including the EPUB mimetype first entry."""
+    with zipfile.ZipFile(epub) as archive:
+        entries = [(info, archive.read(info)) for info in archive.infolist()]
+    changed = False
+    cleaned = []
+    documents = []
+    for info, data in entries:
+        if info.filename.endswith(('.xhtml', '.html')):
+            text = data.decode('utf-8')
+            updated = strip_index_ids_from_navigation(text)
+            documents.append((f"{epub}!/{info.filename}", updated))
+            if updated != text:
+                changed = True
+                data = updated.encode('utf-8')
+        cleaned.append((info, data))
+    validate_index_anchors(documents)
+    if changed:
+        with zipfile.ZipFile(epub, 'w') as archive:
+            for info, data in cleaned:
+                archive.writestr(info, data)
+
+
 def build_epub(bookdir, check=True, build_id=None):
     print("EPUB", file=sys.stderr, flush=True)
     bookdir = bookdir.resolve()
@@ -891,10 +978,12 @@ def build_epub(bookdir, check=True, build_id=None):
         cmd.insert(-2, f"--epub-cover-image={cover_path}")
 
     try:
-        run(cmd, cwd=str(bookdir), env=filter_env(cfg))
+        run(cmd, cwd=str(bookdir), env=filter_env(cfg, chapters))
     finally:
         meta_path.unlink(missing_ok=True)
         blockquote_css_path.unlink(missing_ok=True)
+
+    clean_epub_index_navigation(epub)
 
     if check:
         # epubcheck exits non-zero on errors; warnings still print but pass.
@@ -953,10 +1042,10 @@ def build_html(bookdir):
                     "--metadata", f"lang={cfg.get('language', 'en')}",
                     "-o", str(html))
     try:
-        run(cmd, cwd=str(bookdir), env=filter_env(cfg))
+        run(cmd, cwd=str(bookdir), env=filter_env(cfg, chapters))
     finally:
         blockquote_css_path.unlink(missing_ok=True)
-    text = html.read_text()
+    text = strip_index_ids_from_navigation(html.read_text())
     # Link an optional per-book stylesheet, added AFTER pandoc's embedded styles
     # so its rules win on the cascade. The file is optional: drop a book_style.css
     # next to the page (or have a build script copy one into out/) to theme the
@@ -1004,6 +1093,7 @@ def build_html(bookdir):
         else:
             warn(f"html-body-end file not found: {inc_path}; "
                  "writing the page without it")
+    validate_index_anchors([(str(html), text)])
     html.write_text(text)
     print(f"✓ wrote {html}")
 

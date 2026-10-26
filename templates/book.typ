@@ -172,6 +172,80 @@
   }
 }
 
+// Unnumbered term definitions and an alphabetical index. Page locations are
+// resolved here, after layout, using the same metadata mechanism as tindex.
+#let term-navigation = state("term-navigation", false)
+#let termdef(key, title, id, display: none, parent: none) = context {
+  if not term-navigation.get() {
+    [#metadata((term: true, key: key, title: title, id: id, parent: parent))#label(id)]
+  }
+  if display == none { title } else { display }
+}
+
+#let termindex() = context {
+  let items = query(metadata).filter(m =>
+    type(m.value) == dictionary and m.value.at("term", default: false))
+  let ids = items.map(m => m.value.id)
+  for m in items {
+    assert(ids.filter(id => id == m.value.id).len() == 1,
+      message: "Index definition '" + m.value.title + "' (" + m.value.id
+        + ") was emitted more than once; a table-of-contents copy may be present.")
+  }
+  let roots = items.map(m => if m.value.parent == none { m.value.key }
+    else { lower(m.value.parent) }).sorted().dedup()
+  let render-entry(title, hits, child: false) = {
+    let seen = ()
+    let pages = ()
+    for m in hits {
+      let loc = m.location()
+      let pg = counter(page).at(loc).first()
+      if not seen.contains(pg) {
+        seen.push(pg)
+        pages.push(if tracked-links.get() { link(loc)[#pg] } else { [#pg] })
+      }
+    }
+    let body = [#title]
+    if child { body = [↳ #body] }
+    if pages.len() > 0 {
+      body = grid(
+        columns: (auto, 1fr, auto), column-gutter: 0.4em,
+        align: (left + bottom, left + bottom, right + bottom),
+        body, repeat[.], pages.join([, ]),
+      )
+    }
+    pad(left: if child { 1em } else { 0pt }, block(breakable: false, body))
+  }
+  for root in roots {
+    let direct = items.filter(m => m.value.parent == none and m.value.key == root)
+    let children = items.filter(m => m.value.parent != none and lower(m.value.parent) == root)
+    let title = if direct.len() > 0 { direct.first().value.title }
+      else { children.first().value.parent }
+    let child-keys = children.map(m => m.value.key).sorted().dedup()
+    if child-keys.len() == 0 {
+      block(above: 0.65em, render-entry(title, direct))
+    } else {
+      // Native repeated grid headers keep the parent with the first child.
+      // Grids avoid the book-wide rules and bold headers used for data tables.
+      // Each rendered header steps a counter, so later pages can be labelled.
+      let repetitions = counter("term-index-repeat-" + root)
+      repetitions.update(0)
+      let header = [#repetitions.step()#context {
+        let continued = repetitions.get().first() > 1
+        render-entry(if continued { title + " (continued)" } else { title },
+          if continued { () } else { direct })
+      }]
+      let rows = child-keys.map(key => {
+        let hits = children.filter(m => m.value.key == key)
+        grid.cell(breakable: false, render-entry(hits.first().value.title, hits, child: true))
+      })
+      block(above: 0.65em, breakable: true, grid(
+        columns: (1fr,), inset: 0pt, row-gutter: 0.65em,
+        grid.header(repeat: true, header), ..rows,
+      ))
+    }
+  }
+}
+
 // Spelled-out part ordinals for the contents page ("PART TWO · BASICS").
 // Books with more than twenty parts fall back to the bare numeral.
 #let part-words = ("One", "Two", "Three", "Four", "Five", "Six", "Seven",
@@ -827,7 +901,11 @@
       #text(font: meta.heading-font, size: 2em)[Contents]
       #v(0.5em)
       #line(length: 100%, stroke: 0.6pt)
+      // Outline entries reuse heading content. Keep their visible text, but
+      // suppress definition metadata and labels at this rendering location.
+      #term-navigation.update(true)
       #outline(title: none, depth: meta.toc-depth)
+      #term-navigation.update(false)
     ]
   }
 

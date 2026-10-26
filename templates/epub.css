@@ -207,3 +207,25 @@ h2 .chapter-label {
   letter-spacing: 0.05em;
   margin-bottom: 0.5em;
 }
+
+/* Index rows retain links when a reader does not support flex layout. */
+.term-index ul { list-style: none; padding-left: 0; margin: 0; }
+.term-index ul ul { margin-left: 1em; }
+.term-index li { margin: 0; padding: 0; }
+.term-index .index-row {
+  display: flex;
+  align-items: baseline;
+  margin: 0.35em 0;
+  text-align: left;
+}
+.term-index .index-row p { margin: 0; }
+.term-index .index-label { flex: 0 1 auto; max-width: 80%; }
+.term-index .index-leader {
+  display: inline-block;
+  width: 1em;
+  min-width: 1em;
+  flex: 1 0 1em;
+  margin: 0 0.4em;
+  border-bottom: 1px dotted currentColor;
+}
+.term-index .index-locations { flex: 0 0 auto; white-space: nowrap; }

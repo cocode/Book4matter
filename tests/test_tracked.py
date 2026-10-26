@@ -32,6 +32,10 @@ class TrackedKinds(unittest.TestCase):
         with self.assertRaises(SystemExit):
             tracked_kinds({"tracked": {"index": "Index"}})
 
+    def test_term_is_reserved(self):
+        with self.assertRaises(SystemExit):
+            tracked_kinds({"tracked": {"term": "Term"}})
+
     def test_not_a_map(self):
         with self.assertRaises(SystemExit):
             tracked_kinds({"tracked": ["exercise"]})

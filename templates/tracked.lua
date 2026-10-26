@@ -51,8 +51,51 @@ local counts = {}        -- kind -> running count (reflow numbering)
 local numbers = {}       -- key -> assigned number (reflow)
 local index_entries = {} -- kind -> ordered list of {id, n, title} (reflow)
 
+-- Pandoc's Markdown AST has no source line positions. Find the offending
+-- markup in the original inputs on failure, rather than reporting print's
+-- rewritten scratch files. If text occurs more than once, list every candidate
+-- instead of guessing which source occurrence was responsible.
+local diagnostic_token = nil
+local function source_locations(token)
+  local paths = PANDOC_STATE.input_files
+  local originals = os.getenv("BF_TRACKED_SOURCES")
+  if originals then paths = pandoc.json.decode(originals) end
+  local pattern = token:gsub("([^%w%s])", "%%%1"):gsub("%s+", "%%s+")
+  local locations = {}
+  for _, path in ipairs(paths) do
+    if path ~= "-" then
+      local file = io.open(path, "r")
+      if file then
+        local source = file:read("*a")
+        file:close()
+        local pos = 1
+        while true do
+          local a, b = source:find(pattern, pos)
+          if not a then break end
+          local _, line = source:sub(1, a - 1):gsub("\n", "")
+          locations[#locations + 1] = path .. ":" .. (line + 1)
+          pos = b + 1
+        end
+      end
+    end
+  end
+  return locations
+end
+
 local function die(msg)
   io.stderr:write("tracked.lua: " .. msg .. "\n")
+  if diagnostic_token then
+    local locations = source_locations(diagnostic_token)
+    if #locations == 1 then
+      io.stderr:write("  at " .. locations[1] .. "\n")
+    elseif #locations > 1 then
+      io.stderr:write("  matching source locations (markup occurs more than once):\n")
+      for _, loc in ipairs(locations) do io.stderr:write("    " .. loc .. "\n") end
+    else
+      io.stderr:write("  source location unavailable (input may be stdin or transformed markup)\n")
+    end
+    io.stderr:write("  offending markup: " .. diagnostic_token .. "\n")
+  end
   os.exit(1)
 end
 
@@ -102,7 +145,7 @@ end
 -- calling on_run(text) -> replacement inlines. Any other inline (emphasis, code,
 -- links) flushes the run and passes through untouched, so a token can't sit
 -- inside markup but everything else is preserved.
-local function walk_runs(inlines, on_run)
+local function walk_runs(inlines, on_run, on_other)
   local out = pandoc.List()
   local run = nil
   local function flush()
@@ -114,7 +157,7 @@ local function walk_runs(inlines, on_run)
     elseif el.t == "Space" or el.t == "SoftBreak" then
       run = (run or "") .. " "
     else
-      flush(); out:insert(el)
+      flush(); out:insert(on_other and on_other(el) or el)
     end
   end
   flush()
@@ -141,6 +184,7 @@ local function split_tokens(text, handle)
     if not close then out:insert(pandoc.Str(text:sub(open))); break end
     local inner = text:sub(open + 1, close - 1)
     local tok = parse_token(inner)
+    diagnostic_token = "{" .. inner .. "}"
     local repl
     if tok and tok.registered then
       repl = handle(tok, tok.kind .. ":" .. tok.id)
@@ -153,6 +197,7 @@ local function split_tokens(text, handle)
           .. "there (or remove ':def' if this isn't a tracked item).")
     end
     if repl then out:extend(repl) else out:insert(pandoc.Str(text:sub(open, close))) end
+    diagnostic_token = nil
     pos = close + 1
   end
   return out
@@ -210,6 +255,139 @@ local function emit_reflow(tok, key)  -- pass 2
     pandoc.Attr(anchor(tok.kind, tok.id), { "tracked-def" }, {})) }
 end
 
+-- Terms share this filter and index placement with numbered tracked items.
+-- [[term]] is an unnumbered definition; repeated definitions are grouped.
+local terms, term_order = {}, {}
+local term_counts = {}
+
+-- Pandoc's implicit header references can parse [[Frame]] as "[", a Link
+-- to a heading named Frame, and "]". Recover the term before scanning text
+-- runs; retain ordinary internal links and all surrounding text unchanged.
+local function recover_terms(ils)
+  local out = pandoc.List()
+  local i = 1
+  while i <= #ils do
+    local a, b, c = ils[i], ils[i + 1], ils[i + 2]
+    if a and b and c and a.t == "Str" and b.t == "Link" and c.t == "Str"
+        and a.text:sub(-1) == "[" and c.text:sub(1, 1) == "]"
+        and b.target:sub(1, 1) == "#" then
+      out:insert(pandoc.Str(a.text:sub(1, -2) .. "[[" .. stringify(b.content)
+        .. "]]" .. c.text:sub(2)))
+      i = i + 3
+    else
+      out:insert(a)
+      i = i + 1
+    end
+  end
+  return out
+end
+
+local function term_inlines(text)
+  local out = pandoc.List()
+  local pos = 1
+  while true do
+    local a, b, raw = text:find("%[%[([^%[%]]-)%]%]", pos)
+    if not a then
+      if pos <= #text then out:insert(pandoc.Str(text:sub(pos))) end
+      break
+    end
+    if a > pos then out:insert(pandoc.Str(text:sub(pos, a - 1))) end
+    diagnostic_token = "[[" .. raw .. "]]"
+    local display, title = raw:match("^([^|]*)|([^|]*)$")
+    if not display then
+      if raw:find("|", 1, true) then die("term definitions allow only one | separator") end
+      display, title = raw, raw
+    end
+    display, title = trim(display), trim(title)
+    if display == "" or title == "" then
+      die("term definitions require nonempty display text and index entry")
+    end
+    if display:find(":", 1, true) then
+      die("term references (:ref) are not supported; use [[term]] or [[text|index entry]]")
+    end
+    local parent, child = title:match("^([^>]*)>([^>]*)$")
+    if title:find(">", 1, true) then
+      if not parent or trim(parent) == "" or trim(child) == "" then
+        die("subentries require nonempty parent and child, with exactly one > separator")
+      end
+      parent, title = trim(parent), trim(child)
+    end
+    local root_title = parent or title
+    local root_key = pandoc.text.lower(root_title)
+    if not terms[root_key] then
+      terms[root_key] = {title = root_title, anchors = {}, children = {}, implicit = parent ~= nil}
+      term_order[#term_order + 1] = root_key
+    elseif not parent and terms[root_key].implicit then
+      terms[root_key].title = title
+      terms[root_key].implicit = false
+    end
+    local key = root_key
+    if parent then
+      key = root_key .. ">" .. pandoc.text.lower(title)
+      if not terms[key] then
+        terms[key] = {title = title, anchors = {}}
+        table.insert(terms[root_key].children, key)
+      end
+    end
+    local slug = key:gsub("[^%w\128-\255]+", "-"):gsub("^-", ""):gsub("-$", "")
+    if slug == "" then slug = "term" end
+    term_counts[slug] = (term_counts[slug] or 0) + 1
+    local id = "idx-" .. slug .. "-" .. term_counts[slug]
+    table.insert(terms[key].anchors, id)
+    if mode == "reflow" then
+      out:insert(pandoc.Span({pandoc.Str(display)}, pandoc.Attr(id)))
+    else
+      local args = string.format("%s, %s, %s", tstr(key), tstr(title), tstr(id))
+      if display ~= title then args = args .. ", display: " .. tstr(display) end
+      if parent then args = args .. ", parent: " .. tstr(parent) end
+      out:insert(pandoc.RawInline("typst", "#termdef(" .. args .. ")"))
+    end
+    diagnostic_token = nil
+    pos = b + 1
+  end
+  return out
+end
+
+local function term_row(entry, child)
+  local label = pandoc.List()
+  if child then label:extend({pandoc.Str("↳"), pandoc.Space()}) end
+  if #entry.anchors == 0 then
+    label:insert(pandoc.Str(entry.title))
+  else
+    label:insert(pandoc.Link({pandoc.Str(entry.title)}, "#" .. entry.anchors[1]))
+  end
+  local row = pandoc.List({pandoc.Span(label, pandoc.Attr("", {"index-label"}))})
+  if #entry.anchors > 0 then
+    local links = pandoc.List()
+    for i, id in ipairs(entry.anchors) do
+      if i > 1 then links:insert(pandoc.Str(", ")) end
+      links:insert(pandoc.Link({pandoc.Str(tostring(i))}, "#" .. id))
+    end
+    row:insert(pandoc.Span({}, pandoc.Attr("", {"index-leader"}, {["aria-hidden"] = "true"})))
+    row:insert(pandoc.Span(links, pandoc.Attr("", {"index-locations"})))
+  end
+  return pandoc.Div({pandoc.Plain(row)}, pandoc.Attr("", {"index-row"}))
+end
+
+local function term_index()
+  local items = pandoc.List()
+  table.sort(term_order)
+  for _, key in ipairs(term_order) do
+    local entry = terms[key]
+    local blocks = pandoc.Blocks({term_row(entry, false)})
+    if #entry.children > 0 then
+      local children = pandoc.List()
+      table.sort(entry.children)
+      for _, child_key in ipairs(entry.children) do
+        children:insert({term_row(terms[child_key], true)})
+      end
+      blocks:insert(pandoc.BulletList(children))
+    end
+    items:insert(blocks)
+  end
+  return pandoc.Div({pandoc.BulletList(items)}, pandoc.Attr("", {"term-index"}))
+end
+
 -- ---- shared block handling: {index:kind} ----------------------------------
 
 local function index_kind(para)
@@ -217,7 +395,8 @@ local function index_kind(para)
 end
 
 local function check_index_kind(kind)
-  if not kinds[kind] then
+  if kind ~= "term" and not kinds[kind] then
+    diagnostic_token = "{index:" .. kind .. "}"
     die("unknown tracked kind in {index:" .. kind ..
         "}; add '" .. kind .. "' to book_metadata.yaml `tracked:`")
   end
@@ -256,6 +435,15 @@ end
 -- ---- orchestration --------------------------------------------------------
 
 function Pandoc(doc)
+  -- Collect all definitions before expanding indexes, including front indexes.
+  -- Process nested inline content in reading order, rather than Pandoc's
+  -- default inside-out order (which would collect links before earlier prose).
+  local function collect_terms(ils)
+    return walk_runs(recover_terms(ils), term_inlines, function(el)
+      return el:walk({ Inlines = collect_terms })
+    end)
+  end
+  doc = doc:walk({ traverse = "topdown", Inlines = collect_terms })
   -- Note: we do NOT bail out when the registry is empty. A book with no
   -- `tracked:` block should still be told if it uses a distinctively marked
   -- token (`{kind:id:def}` or `{index:kind}`) -- otherwise a forgotten registry
@@ -281,6 +469,7 @@ function Pandoc(doc)
         local kind = index_kind(para)
         if not kind then return nil end
         check_index_kind(kind)
+        if kind == "term" then return term_index() end
         return reflow_index(kind)
       end,
     })
@@ -296,6 +485,7 @@ function Pandoc(doc)
       local kind = index_kind(para)
       if not kind then return nil end
       check_index_kind(kind)
+      if kind == "term" then return pandoc.RawBlock("typst", "#termindex()") end
       return pandoc.RawBlock("typst", string.format("#tindex(%s)\n", tstr(kind)))
     end,
   })
