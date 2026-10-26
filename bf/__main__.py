@@ -557,10 +557,38 @@ def resolve_chapters(bookdir, cfg):
     if not chdir.is_dir():
         die(f"no chapters/ directory and no 'chapters:' list in book.yaml ({bookdir})")
     # No explicit list -> include every chapters/*.md and *.txt, in natural
-    # filename order. Plain .txt lets a novelist drop in text files with no
-    # markup at all; pandoc reads them as markdown either way (blank-line
-    # paragraphs, em dashes, and `* * *` scene breaks all work).
+    # filename order. Plain .txt chapters are protected before Markdown parsing.
     return sorted([*chdir.glob("*.md"), *chdir.glob("*.txt")], key=_natural_key)
+
+
+def plain_text_markdown(text):
+    """Protect literal text while retaining blank-line paragraph boundaries.
+
+    Encode ASCII punctuation so Pandoc cannot interpret Markdown, HTML, TeX,
+    or smart punctuation. Encode indentation too so it cannot start code blocks.
+    Entities decode to ordinary text in every output writer.
+    """
+    def protect(line):
+        if not line.strip():
+            return ""
+        indent = len(line) - len(line.lstrip(" \t"))
+        return "".join(
+            f"&#{ord(c)};" if i < indent or (c.isascii() and not c.isalnum()
+                                              and not c.isspace()) else c
+            for i, c in enumerate(line))
+    return "\n".join(protect(line) for line in text.splitlines())
+
+
+def run_chapter_pandoc(cmd, chapters, **kw):
+    """Stage plain-text inputs as literal prose for reflowable outputs."""
+    with tempfile.TemporaryDirectory(prefix="bf_text_") as scratch:
+        replacements = {}
+        for i, chapter in enumerate(chapters):
+            if chapter.suffix.lower() == ".txt":
+                staged = Path(scratch) / f"{i:03d}.md"
+                staged.write_text(plain_text_markdown(read_text_icloud(chapter)))
+                replacements[str(chapter)] = str(staged)
+        run([replacements.get(str(arg), arg) for arg in cmd], **kw)
 
 
 # -------------------------------------------------- novel / no-parts chapters
@@ -643,7 +671,9 @@ def preprocess_chapters(chapters, tmpdir, force_no_parts=False, toc=None,
     (Introduction, Afterword) -- shown with its title but skipped by the chapter
     count -- while the un-titled files carry the numbering. Empty files are
     dropped. Originals are never modified; every rewrite lands in `tmpdir`."""
-    infos = [(f, read_text_icloud(f)) for f in chapters]
+    infos = [(f, plain_text_markdown(read_text_icloud(f))
+              if f.suffix.lower() == ".txt" else read_text_icloud(f))
+             for f in chapters]
     # Drop empty / whitespace-only files: one would otherwise become a blank
     # numbered chapter and consume a number.
     infos = [(f, text, _scan_levels(text)) for (f, text) in infos if text.strip()]
@@ -677,7 +707,7 @@ def preprocess_chapters(chapters, tmpdir, force_no_parts=False, toc=None,
         elif no_parts and any_untitled:
             # A titled file among un-titled ones: a named, un-numbered section.
             body = _mark_first_heading(body, "unnumbered")
-        p = tmpdir / f"{idx:03d}-{f.name}"
+        p = tmpdir / f"{idx:03d}-{f.name}.md"
         p.write_text(body)
         paths.append(p)
     return paths, show_toc, no_parts
@@ -978,7 +1008,8 @@ def build_epub(bookdir, check=True, build_id=None):
         cmd.insert(-2, f"--epub-cover-image={cover_path}")
 
     try:
-        run(cmd, cwd=str(bookdir), env=filter_env(cfg, chapters))
+        run_chapter_pandoc(cmd, chapters, cwd=str(bookdir),
+                           env=filter_env(cfg, chapters))
     finally:
         meta_path.unlink(missing_ok=True)
         blockquote_css_path.unlink(missing_ok=True)
@@ -1042,7 +1073,8 @@ def build_html(bookdir):
                     "--metadata", f"lang={cfg.get('language', 'en')}",
                     "-o", str(html))
     try:
-        run(cmd, cwd=str(bookdir), env=filter_env(cfg, chapters))
+        run_chapter_pandoc(cmd, chapters, cwd=str(bookdir),
+                           env=filter_env(cfg, chapters))
     finally:
         blockquote_css_path.unlink(missing_ok=True)
     text = strip_index_ids_from_navigation(html.read_text())
@@ -1119,7 +1151,7 @@ def build_html_toc(bookdir):
     cmd = _html_cmd(chapters, bookdir,
                     f"--lua-filter={TEMPLATES / 'toc-list.lua'}",
                     "-o", str(toc))
-    run(cmd, cwd=str(bookdir))
+    run_chapter_pandoc(cmd, chapters, cwd=str(bookdir))
     print(f"✓ wrote {toc}")
 
 
@@ -1162,7 +1194,7 @@ def build_html_chapter(bookdir, which):
                     "--section-divs",
                     f"--lua-filter={TEMPLATES / 'epub-wrap.lua'}",
                     "-o", str(html))
-    run(cmd, cwd=str(bookdir))
+    run_chapter_pandoc(cmd, [chapter], cwd=str(bookdir))
     print(f"✓ wrote {html}")
 
 

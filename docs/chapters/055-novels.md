@@ -53,11 +53,10 @@ if you want one anyway; the numbered chapters then appear as "Chapter 1",
 
 ### Plain text files
 
-Chapters may be `.txt` as well as `.md`. A `.txt` file is still read as Markdown
---- so blank lines separate paragraphs, `---` becomes an em dash, and a line of
-`* * *` becomes a scene break --- but a novelist writing ordinary prose need not
-know any of that. Type paragraphs, leave a blank line between them, and it comes
-out right.
+Chapters may be `.txt` as well as `.md`. A `.txt` file is pure text: Markdown
+headings, emphasis, links, and scene-break markers appear literally. Blank lines
+separate paragraphs. Each file becomes an automatically numbered chapter in
+PDF/print builds. Use `.md` when you want Markdown formatting.
 
 ### A named section among numbered chapters
 
@@ -66,10 +65,10 @@ afterword. Give that one file a `#` heading and leave the rest without one:
 
 ```
 chapters/
-  00-introduction.txt      # begins with "# Introduction"
+  00-introduction.md      # begins with "# Introduction"
   01.txt                   # no heading
   02.txt                   # no heading
-  99-afterword.txt         # begins with "# Afterword"
+  99-afterword.md         # begins with "# Afterword"
 ```
 
 A titled file set among untitled ones is treated as a **named section**: it shows

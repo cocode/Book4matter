@@ -36,9 +36,9 @@ assume each file is a chapter and number them. You can still put titles on some 
 
 The Novels and Flat Books chapter covers that low-structure path.
 
-Plain `.txt` files can be used, too. Actually, Book4matter just treats .txt files just like markdown files.
-This could cause problems, if you have Markdown-like markup in your plain text files. But the only formatting
-you need in a text file is to leave a blank line between paragraphs, and put your chapters in individual files.
+Plain `.txt` files are treated as pure text: Markdown commands such as `#`,
+`*emphasis*`, and links appear literally. Leave a blank line between paragraphs
+and put each chapter in its own file. Use `.md` for titles and other formatting.
 
 ### Building each format
 

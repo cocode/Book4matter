@@ -15,9 +15,13 @@ import re
 import shutil
 import tempfile
 import unittest
+import subprocess
+from unittest.mock import patch
 from pathlib import Path
 
 from bf.__main__ import (
+    plain_text_markdown,
+    run_chapter_pandoc,
     preprocess_chapters,
     resolve_chapters,
     _scan_levels,
@@ -143,6 +147,54 @@ class TestPureNovel(TmpBase):
         self.assertFalse(show_toc)
 
 
+class TestPlainText(TmpBase):
+    SOURCE = "# Literal heading\n\n## Also literal\n\n*emphasis* [link](url) <b>html</b>\n\n---\n\n    indented text\n\n1. list\n\n```\ncode\n```\n"
+
+    def test_txt_does_not_define_titles_or_parts(self):
+        heads, bodies, toc, no_parts = self.prep([("one.txt", self.SOURCE)])
+        self.assertEqual(heads, ["##"])
+        self.assertFalse(toc)
+        self.assertTrue(no_parts)
+        self.assertEqual(bodies[0], "##\n\n" + plain_text_markdown(self.SOURCE))
+
+    def test_markdown_still_defines_structure_in_mixed_book(self):
+        heads, bodies, toc, no_parts = self.prep([
+            ("one.md", "# Part\n\n## Chapter\n\n*emphasis*"),
+            ("two.txt", self.SOURCE)])
+        self.assertFalse(no_parts)
+        self.assertTrue(toc)
+        self.assertEqual(heads, ["# Part", "## Chapter 1 {.unnumbered}"])
+        self.assertIn("*emphasis*", bodies[0])
+
+    def test_reflow_stages_only_txt_and_cleans_up(self):
+        txt = self.root / "one.txt"
+        md = self.root / "two.md"
+        txt.write_text(self.SOURCE)
+        md.write_text("*emphasis*")
+        staged_paths = []
+        def check(cmd, **kw):
+            staged = Path(cmd[1])
+            staged_paths.append(staged)
+            self.assertEqual(staged.read_text(), plain_text_markdown(self.SOURCE))
+            self.assertEqual(cmd[2], str(md))
+        with patch("bf.__main__.run", side_effect=check):
+            run_chapter_pandoc(["pandoc", str(txt), str(md)], [txt, md])
+        self.assertFalse(staged_paths[0].exists())
+        self.assertEqual(txt.read_text(), self.SOURCE)
+
+    @unittest.skipUnless(shutil.which("pandoc"), "requires existing pandoc")
+    def test_pandoc_renders_literal_prose(self):
+        html = subprocess.run(
+            ["pandoc", "-f", "markdown", "-t", "html5"],
+            input=plain_text_markdown(self.SOURCE), text=True,
+            capture_output=True, check=True).stdout
+        for tag in ("<h", "<em>", "<a ", "<b>", "<hr", "<pre>", "<ol>"):
+            self.assertNotIn(tag, html)
+        self.assertIn("# Literal heading", html)
+        self.assertIn("*emphasis* [link](url) &lt;b&gt;html&lt;/b&gt;", html)
+        self.assertIn("---", html)
+
+
 class TestEmptyFiles(TmpBase):
     def test_empty_file_skipped_and_not_numbered(self):
         # Force labels (running heads) so the numbers are visible in the output.
@@ -208,10 +260,10 @@ class TestMixed(TmpBase):
 
     def test_named_sections_and_numbered_chapters(self):
         heads, _, show_toc, no_parts = self.prep(
-            [("00-intro.txt", "# Introduction\n\nwelcome\n"),
+            [("00-intro.md", "# Introduction\n\nwelcome\n"),
              ("01.txt", "First real chapter.\n"),
              ("02.txt", "Second real chapter.\n"),
-             ("99-after.txt", "# Afterword\n\nthanks\n")])
+             ("99-after.md", "# Afterword\n\nthanks\n")])
         self.assertTrue(no_parts)
         self.assertTrue(show_toc)                  # there are titles to list
         self.assertEqual(heads, [
