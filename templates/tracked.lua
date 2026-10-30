@@ -258,6 +258,7 @@ end
 -- Terms share this filter and index placement with numbered tracked items.
 -- [[term]] is an unnumbered definition; repeated definitions are grouped.
 local terms, term_order = {}, {}
+local term_aliases = {}
 local term_counts = {}
 
 -- Pandoc's implicit header references can parse [[Frame]] as "[", a Link
@@ -298,6 +299,20 @@ local function term_inlines(text)
       if raw:find("|", 1, true) then die("term definitions allow only one | separator") end
       display, title = raw, raw
     end
+    local aliases = {}
+    if raw:find("|", 1, true) and title:find(";", 1, true) then
+      local parts = {}
+      for part in (title .. ";"):gmatch("(.-);") do
+        part = trim(part)
+        if part == "" then die("index aliases require nonempty names after each ;") end
+        parts[#parts + 1] = part
+      end
+      title = parts[1]
+      for i = 2, #parts do
+        if parts[i]:find(">", 1, true) then die("see aliases must be top-level names, without >") end
+        aliases[#aliases + 1] = parts[i]
+      end
+    end
     display, title = trim(display), trim(title)
     if display == "" or title == "" then
       die("term definitions require nonempty display text and index entry")
@@ -329,6 +344,17 @@ local function term_inlines(text)
         table.insert(terms[root_key].children, key)
       end
     end
+    for _, alias in ipairs(aliases) do
+      local alias_key = pandoc.text.lower(alias)
+      if alias_key == key then die("an index see alias cannot refer to itself: " .. alias) end
+      if term_aliases[alias_key] and term_aliases[alias_key].target ~= key then
+        die("index see alias '" .. alias .. "' refers to more than one entry")
+      end
+      if not term_aliases[alias_key] then
+        term_aliases[alias_key] = {title = alias, target = key, token = diagnostic_token,
+          target_title = parent and (parent .. ", " .. title) or title}
+      end
+    end
     local slug = key:gsub("[^%w\128-\255]+", "-"):gsub("^-", ""):gsub("-$", "")
     if slug == "" then slug = "term" end
     term_counts[slug] = (term_counts[slug] or 0) + 1
@@ -340,6 +366,11 @@ local function term_inlines(text)
       local args = string.format("%s, %s, %s", tstr(key), tstr(title), tstr(id))
       if display ~= title then args = args .. ", display: " .. tstr(display) end
       if parent then args = args .. ", parent: " .. tstr(parent) end
+      if #aliases > 0 then
+        local values = {}
+        for _, alias in ipairs(aliases) do values[#values + 1] = tstr(alias) end
+        args = args .. ", aliases: (" .. table.concat(values, ", ") .. ",)"
+      end
       out:insert(pandoc.RawInline("typst", "#termdef(" .. args .. ")"))
     end
     diagnostic_token = nil
@@ -371,19 +402,30 @@ end
 
 local function term_index()
   local items = pandoc.List()
-  table.sort(term_order)
-  for _, key in ipairs(term_order) do
-    local entry = terms[key]
-    local blocks = pandoc.Blocks({term_row(entry, false)})
-    if #entry.children > 0 then
-      local children = pandoc.List()
-      table.sort(entry.children)
-      for _, child_key in ipairs(entry.children) do
-        children:insert({term_row(terms[child_key], true)})
+  local order = {}
+  for _, key in ipairs(term_order) do order[#order + 1] = key end
+  for key in pairs(term_aliases) do order[#order + 1] = key end
+  table.sort(order)
+  for _, key in ipairs(order) do
+    local alias = term_aliases[key]
+    if alias then
+      local text = {pandoc.Str(alias.title .. "."), pandoc.Space(),
+        pandoc.Emph({pandoc.Str("see")}), pandoc.Space(),
+        pandoc.Link({pandoc.Str(alias.target_title)}, "#" .. terms[alias.target].anchors[1])}
+      items:insert({pandoc.Div({pandoc.Plain(text)}, pandoc.Attr("", {"index-see"}))})
+    else
+      local entry = terms[key]
+      local blocks = pandoc.Blocks({term_row(entry, false)})
+      if #entry.children > 0 then
+        local children = pandoc.List()
+        table.sort(entry.children)
+        for _, child_key in ipairs(entry.children) do
+          children:insert({term_row(terms[child_key], true)})
+        end
+        blocks:insert(pandoc.BulletList(children))
       end
-      blocks:insert(pandoc.BulletList(children))
+      items:insert(blocks)
     end
-    items:insert(blocks)
   end
   return pandoc.Div({pandoc.BulletList(items)}, pandoc.Attr("", {"term-index"}))
 end
@@ -444,6 +486,12 @@ function Pandoc(doc)
     end)
   end
   doc = doc:walk({ traverse = "topdown", Inlines = collect_terms })
+  for key, alias in pairs(term_aliases) do
+    if terms[key] then
+      diagnostic_token = alias.token
+      die("index see alias '" .. alias.title .. "' conflicts with an existing entry")
+    end
+  end
   -- Note: we do NOT bail out when the registry is empty. A book with no
   -- `tracked:` block should still be told if it uses a distinctively marked
   -- token (`{kind:id:def}` or `{index:kind}`) -- otherwise a forgotten registry

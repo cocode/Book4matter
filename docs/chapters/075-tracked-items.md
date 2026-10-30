@@ -270,6 +270,49 @@ One level of subentries is supported. Both parent and child must be nonempty;
 `[[text|Parent>]]`, `[[text|>child]]`, and `[[text|A>B>C]]` stop the build with a
 markup error. Commas remain ordinary index text, as in `Powers, Richard`.
 
+### Adding “see” aliases
+
+Add alternate lookup names after the main index wording, separated by `;`:
+
+```markdown
+[[Tempo|Tempo;BPM]]
+```
+
+The prose displays **Tempo**. The index contains a normal **Tempo** entry with
+its locations, plus **BPM. see Tempo** under B. A “see” alias has no page numbers
+or dot leaders of its own. In digital PDF, HTML, and EPUB, its target name links
+to the main entry's first definition in the book; print shows plain text.
+
+You can declare several aliases on one definition:
+
+```markdown
+[[Tempo|Tempo;BPM;Beats per minute]]
+```
+
+The visible wording can differ, and aliases also work in headings and links:
+
+```markdown
+## [[Musical speed|Tempo;BPM]]
+
+[[[Tempo|Tempo;BPM]]](https://example.com)
+```
+
+An alias can point to a subentry:
+
+```markdown
+[[polka hold|Practice hold>polka;Polka grip]]
+```
+
+That adds **Polka grip. see Practice hold, polka**, linking to the polka hold
+definition. Alias names themselves are top-level entries, not subentries.
+
+Spaces around `;` are trimmed. Repeating the same alias for the same entry is
+allowed and produces one “see” entry. An alias cannot be empty, refer to itself,
+point to different entries, or share its name with a normal entry or parent.
+Conflicts are compared without regard to case and stop the build with a source
+diagnostic. In index wording after `|`, `;` is reserved for alias separators;
+commas remain ordinary text, as in `Powers, Richard`.
+
 ### Finding markup errors
 
 Invalid term definitions stop the build with a reason, the original chapter

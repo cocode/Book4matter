@@ -175,9 +175,9 @@
 // Unnumbered term definitions and an alphabetical index. Page locations are
 // resolved here, after layout, using the same metadata mechanism as tindex.
 #let term-navigation = state("term-navigation", false)
-#let termdef(key, title, id, display: none, parent: none) = context {
+#let termdef(key, title, id, display: none, parent: none, aliases: ()) = context {
   if not term-navigation.get() {
-    [#metadata((term: true, key: key, title: title, id: id, parent: parent))#label(id)]
+    [#metadata((term: true, key: key, title: title, id: id, parent: parent, aliases: aliases))#label(id)]
   }
   if display == none { title } else { display }
 }
@@ -191,8 +191,18 @@
       message: "Index definition '" + m.value.title + "' (" + m.value.id
         + ") was emitted more than once; a table-of-contents copy may be present.")
   }
+  let aliases = (:)
+  for m in items {
+    for alias in m.value.aliases {
+      let key = lower(alias)
+      if not aliases.keys().contains(key) {
+        aliases.insert(key, (title: alias, target: m))
+      }
+    }
+  }
   let roots = items.map(m => if m.value.parent == none { m.value.key }
-    else { lower(m.value.parent) }).sorted().dedup()
+    else { lower(m.value.parent) })
+  roots = (roots + aliases.keys()).sorted().dedup()
   let render-entry(title, hits, child: false) = {
     let seen = ()
     let pages = ()
@@ -216,32 +226,41 @@
     pad(left: if child { 1em } else { 0pt }, block(breakable: false, body))
   }
   for root in roots {
-    let direct = items.filter(m => m.value.parent == none and m.value.key == root)
-    let children = items.filter(m => m.value.parent != none and lower(m.value.parent) == root)
-    let title = if direct.len() > 0 { direct.first().value.title }
-      else { children.first().value.parent }
-    let child-keys = children.map(m => m.value.key).sorted().dedup()
-    if child-keys.len() == 0 {
-      block(above: 0.65em, render-entry(title, direct))
+    if aliases.keys().contains(root) {
+      let alias = aliases.at(root)
+      let target = alias.target
+      let name = if target.value.parent == none { target.value.title }
+        else { target.value.parent + ", " + target.value.title }
+      let destination = if tracked-links.get() { link(target.location())[#name] } else { [#name] }
+      block(above: 0.65em, breakable: false)[#alias.title. #emph[see] #destination]
     } else {
-      // Native repeated grid headers keep the parent with the first child.
-      // Grids avoid the book-wide rules and bold headers used for data tables.
-      // Each rendered header steps a counter, so later pages can be labelled.
-      let repetitions = counter("term-index-repeat-" + root)
-      repetitions.update(0)
-      let header = [#repetitions.step()#context {
-        let continued = repetitions.get().first() > 1
-        render-entry(if continued { title + " (continued)" } else { title },
-          if continued { () } else { direct })
-      }]
-      let rows = child-keys.map(key => {
-        let hits = children.filter(m => m.value.key == key)
-        grid.cell(breakable: false, render-entry(hits.first().value.title, hits, child: true))
-      })
-      block(above: 0.65em, breakable: true, grid(
-        columns: (1fr,), inset: 0pt, row-gutter: 0.65em,
-        grid.header(repeat: true, header), ..rows,
-      ))
+      let direct = items.filter(m => m.value.parent == none and m.value.key == root)
+      let children = items.filter(m => m.value.parent != none and lower(m.value.parent) == root)
+      let title = if direct.len() > 0 { direct.first().value.title }
+        else { children.first().value.parent }
+      let child-keys = children.map(m => m.value.key).sorted().dedup()
+      if child-keys.len() == 0 {
+        block(above: 0.65em, render-entry(title, direct))
+      } else {
+        // Native repeated grid headers keep the parent with the first child.
+        // Grids avoid the book-wide rules and bold headers used for data tables.
+        // Each rendered header steps a counter, so later pages can be labelled.
+        let repetitions = counter("term-index-repeat-" + root)
+        repetitions.update(0)
+        let header = [#repetitions.step()#context {
+          let continued = repetitions.get().first() > 1
+          render-entry(if continued { title + " (continued)" } else { title },
+            if continued { () } else { direct })
+        }]
+        let rows = child-keys.map(key => {
+          let hits = children.filter(m => m.value.key == key)
+          grid.cell(breakable: false, render-entry(hits.first().value.title, hits, child: true))
+        })
+        block(above: 0.65em, breakable: true, grid(
+          columns: (1fr,), inset: 0pt, row-gutter: 0.65em,
+          grid.header(repeat: true, header), ..rows,
+        ))
+      }
     }
   }
 }
