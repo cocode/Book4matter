@@ -379,7 +379,7 @@ local function term_inlines(text)
   return out
 end
 
-local function term_row(entry, child)
+local function term_row(entry, child, prefix)
   local label = pandoc.List()
   if child then label:extend({pandoc.Str("↳"), pandoc.Space()}) end
   if #entry.anchors == 0 then
@@ -397,37 +397,52 @@ local function term_row(entry, child)
     row:insert(pandoc.Span({}, pandoc.Attr("", {"index-leader"}, {["aria-hidden"] = "true"})))
     row:insert(pandoc.Span(links, pandoc.Attr("", {"index-locations"})))
   end
-  return pandoc.Div({pandoc.Plain(row)}, pandoc.Attr("", {"index-row"}))
+  return pandoc.Div({pandoc.Plain(row)}, pandoc.Attr(#entry.anchors > 0 and (prefix .. entry.anchors[1]) or "", {"index-row"}))
 end
 
+local term_index_count = 0
 local function term_index()
+  term_index_count = term_index_count + 1
+  local prefix = "term-index-" .. term_index_count .. "-"
   local items = pandoc.List()
   local order = {}
   for _, key in ipairs(term_order) do order[#order + 1] = key end
-  for key in pairs(term_aliases) do order[#order + 1] = key end
+  for key in pairs(term_aliases) do
+    if not terms[key] then order[#order + 1] = key end
+  end
   table.sort(order)
   for _, key in ipairs(order) do
     local alias = term_aliases[key]
-    if alias then
+    if alias and not terms[key] then
       local text = {pandoc.Str(alias.title .. "."), pandoc.Space(),
         pandoc.Emph({pandoc.Str("see")}), pandoc.Space(),
-        pandoc.Link({pandoc.Str(alias.target_title)}, "#" .. terms[alias.target].anchors[1])}
+        pandoc.Link({pandoc.Str(alias.target_title)}, "#" .. prefix .. terms[alias.target].anchors[1])}
       items:insert({pandoc.Div({pandoc.Plain(text)}, pandoc.Attr("", {"index-see"}))})
     else
       local entry = terms[key]
-      local blocks = pandoc.Blocks({term_row(entry, false)})
+      local blocks = pandoc.Blocks({term_row(entry, false, prefix)})
+      if alias then
+        local text = {pandoc.Emph({pandoc.Str("see also")}), pandoc.Space(),
+          pandoc.Link({pandoc.Str(alias.target_title)}, "#" .. prefix .. terms[alias.target].anchors[1])}
+        blocks:insert(pandoc.Div({pandoc.Plain(text)}, pandoc.Attr("", {"index-see"})))
+      end
       if #entry.children > 0 then
         local children = pandoc.List()
         table.sort(entry.children)
         for _, child_key in ipairs(entry.children) do
-          children:insert({term_row(terms[child_key], true)})
+          children:insert({term_row(terms[child_key], true, prefix)})
         end
         blocks:insert(pandoc.BulletList(children))
       end
       items:insert(blocks)
     end
   end
-  return pandoc.Div({pandoc.BulletList(items)}, pandoc.Attr("", {"term-index"}))
+  local heading = pandoc.Div({pandoc.Plain({
+    pandoc.Span({pandoc.Str("Term")}, pandoc.Attr("", {"index-label"})),
+    pandoc.Span({pandoc.Str("Refs")}, pandoc.Attr("", {"index-locations"},
+      {title = "Links to indexed occurrences, not page numbers"}))
+  })}, pandoc.Attr("", {"index-row", "index-heading"}))
+  return pandoc.Div({heading, pandoc.BulletList(items)}, pandoc.Attr("", {"term-index"}))
 end
 
 -- ---- shared block handling: {index:kind} ----------------------------------
@@ -486,12 +501,6 @@ function Pandoc(doc)
     end)
   end
   doc = doc:walk({ traverse = "topdown", Inlines = collect_terms })
-  for key, alias in pairs(term_aliases) do
-    if terms[key] then
-      diagnostic_token = alias.token
-      die("index see alias '" .. alias.title .. "' conflicts with an existing entry")
-    end
-  end
   -- Note: we do NOT bail out when the registry is empty. A book with no
   -- `tracked:` block should still be told if it uses a distinctively marked
   -- token (`{kind:id:def}` or `{index:kind}`) -- otherwise a forgotten registry

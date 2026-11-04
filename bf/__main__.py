@@ -1031,9 +1031,11 @@ def build_epub(bookdir, check=True, build_id=None):
 def _html_cmd(chapters, bookdir, *extra):
     """Shared pandoc invocation for the HTML outputs: markdown -> html5 over the
     given chapter files, with the same image resource paths the EPUB build uses
-    (chapters reference ../media/x, resolved from the chapters dir)."""
+    (chapters reference ../media/x, resolved from the chapters dir). Source
+    examples stay literal, without syntax highlighting."""
     return ["pandoc", *[str(c) for c in chapters],
             "-f", "markdown", "-t", "html5", "--wrap=preserve",
+            "--syntax-highlighting=none",
             f"--resource-path={bookdir / 'chapters'}:{bookdir}",
             *extra]
 

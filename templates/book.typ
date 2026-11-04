@@ -183,6 +183,8 @@
 }
 
 #let termindex() = context {
+  let index-location = here()
+  let index-marker(key) = metadata((term-index: index-location, key: key))
   let items = query(metadata).filter(m =>
     type(m.value) == dictionary and m.value.at("term", default: false))
   let ids = items.map(m => m.value.id)
@@ -225,22 +227,35 @@
     }
     pad(left: if child { 1em } else { 0pt }, block(breakable: false, body))
   }
+  let cross-reference(alias, also: false) = {
+    let target = alias.target
+    let name = if target.value.parent == none { target.value.title }
+      else { target.value.parent + ", " + target.value.title }
+    let destination = if tracked-links.get() {
+      let rows = query(metadata).filter(m => type(m.value) == dictionary
+        and m.value.at("term-index", default: none) == index-location
+        and m.value.at("key", default: none) == target.value.key)
+      if rows.len() > 0 { link(rows.first().location())[#name] } else { [#name] }
+    } else { [#name] }
+    if also { [#emph[see also] #destination] }
+    else { [#alias.title. #emph[see] #destination] }
+  }
   for root in roots {
-    if aliases.keys().contains(root) {
-      let alias = aliases.at(root)
-      let target = alias.target
-      let name = if target.value.parent == none { target.value.title }
-        else { target.value.parent + ", " + target.value.title }
-      let destination = if tracked-links.get() { link(target.location())[#name] } else { [#name] }
-      block(above: 0.65em, breakable: false)[#alias.title. #emph[see] #destination]
+    let direct = items.filter(m => m.value.parent == none and m.value.key == root)
+    let children = items.filter(m => m.value.parent != none and lower(m.value.parent) == root)
+    let alias = aliases.at(root, default: none)
+    if alias != none and direct.len() == 0 and children.len() == 0 {
+      block(above: 0.65em, breakable: false, cross-reference(alias))
     } else {
-      let direct = items.filter(m => m.value.parent == none and m.value.key == root)
-      let children = items.filter(m => m.value.parent != none and lower(m.value.parent) == root)
       let title = if direct.len() > 0 { direct.first().value.title }
         else { children.first().value.parent }
       let child-keys = children.map(m => m.value.key).sorted().dedup()
       if child-keys.len() == 0 {
-        block(above: 0.65em, render-entry(title, direct))
+        block(above: 0.65em, breakable: false)[
+          #index-marker(root)
+          #render-entry(title, direct)
+          #if alias != none { cross-reference(alias, also: true) }
+        ]
       } else {
         // Native repeated grid headers keep the parent with the first child.
         // Grids avoid the book-wide rules and bold headers used for data tables.
@@ -249,12 +264,14 @@
         repetitions.update(0)
         let header = [#repetitions.step()#context {
           let continued = repetitions.get().first() > 1
+          if not continued { index-marker(root) }
           render-entry(if continued { title + " (continued)" } else { title },
             if continued { () } else { direct })
+          if not continued and alias != none { cross-reference(alias, also: true) }
         }]
         let rows = child-keys.map(key => {
           let hits = children.filter(m => m.value.key == key)
-          grid.cell(breakable: false, render-entry(hits.first().value.title, hits, child: true))
+          grid.cell(breakable: false)[#index-marker(key)#render-entry(hits.first().value.title, hits, child: true)]
         })
         block(above: 0.65em, breakable: true, grid(
           columns: (1fr,), inset: 0pt, row-gutter: 0.65em,

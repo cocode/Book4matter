@@ -236,9 +236,9 @@ class TermMarkup(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         html = result.stdout.replace('\n', ' ')
         self.assertEqual(html.count('BPM.'), 1)
-        self.assertIn('BPM. <em>see</em> <a href="#idx-tempo-1">Tempo</a>', html)
+        self.assertIn('BPM. <em>see</em> <a href="#term-index-1-idx-tempo-1">Tempo</a>', html)
         self.assertIn('Beats per minute. <em>see</em>', html)
-        self.assertIn('Polka grip. <em>see</em> <a href="#idx-practice-hold-polka-1">Practice hold, polka</a>', html)
+        self.assertIn('Polka grip. <em>see</em> <a href="#term-index-1-idx-practice-hold-polka-1">Practice hold, polka</a>', html)
         self.assertLess(html.index('Beats per minute.'), html.index('BPM.'))
         self.assertIn('id="idx-tempo-1">Tempo</span></h2>', html)
         self.assertIn('href="https://example.com"><span id="idx-tempo-2">speed</span></a>', html)
@@ -247,11 +247,115 @@ class TermMarkup(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn('aliases: ("BPM",)', result.stdout)
 
+    def test_see_alias_with_own_occurrences_and_children(self):
+        for definitions in (
+                '[[Tempo|Tempo;BPM]] [[BPM]] [[BPM]]',
+                '[[BPM]] [[BPM]] [[Tempo|Tempo;BPM]]',
+                '[[Tempo|Tempo;bpm]] [[BPM]] [[BPM]]'):
+            with self.subTest(definitions=definitions):
+                result = self.convert('{index:term}\n\n' + definitions)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                html = result.stdout.replace('\n', ' ')
+                self.assertEqual(html.count('<em>see also</em>'), 1)
+                self.assertNotIn('<em>see</em>', html)
+                self.assertIn('href="#idx-bpm-1">BPM</a>', html)
+                self.assertIn('href="#idx-bpm-2">2</a>', html)
+                self.assertIn('<em>see also</em> <a href="#term-index-1-idx-tempo-1">Tempo</a>', html)
+        result = self.convert('[[Tempo|Tempo;BPM]] [[slow|BPM>slow]]\n\n{index:term}')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('<em>see also</em>', result.stdout)
+        self.assertIn('>slow</a>', result.stdout)
+
+    @unittest.skipUnless(shutil.which('typst'), 'typst is not available')
+    def test_see_also_builds_in_all_formats(self):
+        import bf.__main__ as bf
+        from unittest.mock import patch
+        from pypdf import PdfReader
+        import zipfile
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'chapters').mkdir()
+            (root / 'book_metadata.yaml').write_text('title: See also test\nauthor: Test\n')
+            (root / 'book_style.yaml').write_text('toc: true\n')
+            (root / 'chapters/01.md').write_text(
+                '## Index {.section}\n\n{index:term}\n\n'
+                '## Tempo\n\n[[BPM]] [[BPM]]\n\n'
+                '[[Tempo|Tempo;BPM;Beats per minute]]\n\n'
+                + '[[Tempo]]\n\n' * 19 +
+                '[[slow|BPM>slow]]\n\n'
+                '[[Pulse|Pulse;Meter]] [[beats|Meter>beats]]\n')
+            with patch.object(bf, 'TEMPLATES', ROOT / 'templates'):
+                bf.build_html(root)
+                bf.build_epub(root)
+                for mode in ('print', 'live'):
+                    bf.build_print(root, links=mode)
+                    suffix = '' if mode == 'live' else '-interior'
+                    reader = PdfReader(root / 'out' / ('see-also-test' + suffix + '.pdf'))
+                    text = ''.join(''.join(p.extract_text().split()) for p in reader.pages)
+                    self.assertEqual(text.count('seealsoTempo'), 1)
+                    self.assertEqual(text.count('seealsoPulse'), 1)
+                    self.assertIn('Beatsperminute.seeTempo', text)
+                    self.assertIn('slow', text)
+                    self.assertIn('beats', text)
+                    index = next(p for p in reader.pages if 'seealsoTempo' in ''.join(p.extract_text().split()))
+                    index_text = ''.join(index.extract_text().split())
+                    self.assertRegex(index_text, r'BPM\.+[0-9]+seealsoTempo')
+                    self.assertEqual(bool(index.get('/Annots', [])), mode == 'live')
+            html = (root / 'out/see-also-test.html').read_text()
+            self.assertIn('<em>see also</em> <a href="#term-index-1-idx-tempo-1">Tempo</a>', html)
+            self.assertIn('id="term-index-1-idx-tempo-1"', html)
+            self.assertIn('href="#idx-tempo-20">20</a>', html)
+            self.assertIn('>Refs</span>', html)
+            self.assertIn('href="#idx-bpm-2">2</a>', html)
+            self.assertIn('>slow</a>', html)
+            with zipfile.ZipFile(root / 'out/see-also-test.epub') as archive:
+                pages = '\n'.join(archive.read(n).decode() for n in archive.namelist() if n.endswith('.xhtml'))
+                self.assertEqual(pages.count('<em>see also</em>'), 2)
+                self.assertIn('Beats per minute. <em>see</em>', pages)
+                self.assertIn('#idx-bpm-2"', pages)
+                self.assertIn('>slow</a>', pages)
+
+    def test_cross_references_stay_in_each_html_index(self):
+        source = ('{index:term}\n\n[[Tempo|Tempo;BPM]] [[Tempo]] [[BPM]]\n\n'
+                  '{index:term}')
+        result = self.convert(source)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        for i in (1, 2):
+            target = f'term-index-{i}-idx-tempo-1'
+            self.assertEqual(result.stdout.count(f'id="{target}"'), 1)
+            self.assertIn(f'<em>see also</em> <a href="#{target}">Tempo</a>', result.stdout)
+
+    @unittest.skipUnless(shutil.which('typst'), 'typst is not available')
+    def test_pdf_cross_references_target_each_index_not_body(self):
+        from pypdf import PdfReader
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            shutil.copy(ROOT / 'templates/book.typ', root / 'book.typ')
+            (root / 'test.typ').write_text(
+                '#import "book.typ": termdef, termindex, tracked-links\n'
+                '#set page(width: 20cm, height: 25cm)\n'
+                '#tracked-links.update(true)\n'
+                '#termindex()\n#pagebreak()\n'
+                '#termdef("tempo", "Tempo", "tempo-1", aliases: ("BPM", "Speed"))\n'
+                '#termdef("tempo", "Tempo", "tempo-2")\n'
+                '#termdef("bpm", "BPM", "bpm-1")\n'
+                '#termdef("hold>polka", "polka", "polka-1", parent: "Hold", aliases: ("Grip",))\n'
+                '#pagebreak()\n#termindex()\n')
+            subprocess.run(['typst', 'compile', '--root', str(root), str(root / 'test.typ'),
+                            str(root / 'test.pdf')], check=True, capture_output=True)
+            reader = PdfReader(root / 'test.pdf')
+            self.assertEqual(len(reader.pages), 3)
+            for i in (0, 2):
+                destinations = [a.get_object()['/Dest'][0].idnum
+                                for a in reader.pages[i].get('/Annots', [])]
+                # BPM see also Tempo, Speed see Tempo, Grip see Hold, polka.
+                self.assertEqual(destinations.count(reader.pages[i].indirect_reference.idnum), 3)
+                # Tempo shares one page, so its two occurrences have one page link.
+                self.assertEqual(destinations.count(reader.pages[1].indirect_reference.idnum), 3)
+
     def test_invalid_see_aliases_report_offending_markup(self):
         for source in ('[[Tempo|Tempo;]]', '[[Tempo|Tempo;;BPM]]',
                        '[[Tempo|Tempo;Tempo]]', '[[Tempo|Tempo;Group>child]]',
-                       '[[Tempo|Tempo;BPM]] [[BPM]]',
-                       '[[BPM]] [[Tempo|Tempo;BPM]]',
                        '[[Tempo|Tempo;BPM]] [[Speed|Speed;BPM]]'):
             with self.subTest(source=source):
                 result = self.convert(source)

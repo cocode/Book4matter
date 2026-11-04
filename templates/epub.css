@@ -229,3 +229,6 @@ h2 .chapter-label {
   border-bottom: 1px dotted currentColor;
 }
 .term-index .index-locations { flex: 0 0 auto; white-space: nowrap; }
+
+.term-index .index-heading { justify-content: space-between; font-weight: bold; }
+.term-index .index-row[id] { scroll-margin-top: 1.5em; }

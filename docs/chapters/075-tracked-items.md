@@ -258,7 +258,8 @@ in every format.
 Index rows have dot leaders between the term and its locations, and every
 subentry has a `↳` marker as well as indentation. In HTML and EPUB, the numbers
 on the right are linked occurrence numbers (1, 2, and so on), not fixed page
-numbers; the term itself also links to the first definition. Automatically
+numbers. The column is labelled **Refs**; each number opens an indexed
+occurrence. The term itself also links to the first definition. Automatically
 created parents without definitions have no leaders or location numbers.
 
 Print and PDF keep each parent with its first child. If a group spans pages,
@@ -279,9 +280,11 @@ Add alternate lookup names after the main index wording, separated by `;`:
 ```
 
 The prose displays **Tempo**. The index contains a normal **Tempo** entry with
-its locations, plus **BPM. see Tempo** under B. A “see” alias has no page numbers
-or dot leaders of its own. In digital PDF, HTML, and EPUB, its target name links
-to the main entry's first definition in the book; print shows plain text.
+its locations, plus **BPM. see Tempo** under B when BPM has no indexed
+occurrences of its own. That “see” entry has no page numbers or dot leaders.
+In digital PDF, HTML, and EPUB, both “see” and “see also” link to the target's
+row in the index, where readers can choose among all its locations. A target
+with subentries links to the specific subentry's row. Print shows plain text.
 
 You can declare several aliases on one definition:
 
@@ -306,11 +309,26 @@ An alias can point to a subentry:
 That adds **Polka grip. see Practice hold, polka**, linking to the polka hold
 definition. Alias names themselves are top-level entries, not subentries.
 
+If the alias also has indexed occurrences, the index keeps those locations
+and adds **see also** automatically:
+
+```text
+[[Tempo|Tempo;BPM]]
+[[BPM]]
+[[BPM]]
+```
+
+Here **BPM** lists the locations of both `[[BPM]]` markers, followed by
+**see also Tempo**. **Tempo** lists the location of the first marker. If BPM
+has subentries, those are kept too. You can add occurrences anywhere in the
+book, before or after the alias declaration; no markup changes are needed.
+Ordinary, unmarked mentions of BPM do not add index locations or change
+“see” to “see also”.
+
 Spaces around `;` are trimmed. Repeating the same alias for the same entry is
-allowed and produces one “see” entry. An alias cannot be empty, refer to itself,
-point to different entries, or share its name with a normal entry or parent.
-Conflicts are compared without regard to case and stop the build with a source
-diagnostic. In index wording after `|`, `;` is reserved for alias separators;
+allowed and produces one cross-reference. An alias cannot be empty, refer to
+itself, or point to different entries. Names are compared without regard to
+case. Invalid aliases stop the build with a source diagnostic. In index wording after `|`, `;` is reserved for alias separators;
 commas remain ordinary text, as in `Powers, Richard`.
 
 ### Finding markup errors
