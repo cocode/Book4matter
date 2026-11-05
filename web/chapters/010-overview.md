@@ -12,13 +12,15 @@ TBH, Book4matter is not really designed as a website builder. But using it to bu
 
 Book4matter is available as a web app, and also as command line tool. 
 
-The web version is at [app.book4matter.com](http://app.book4matter.com)
+The web version is at [app.book4matter.com](http://app.book4matter.com).
+
+Source: [Book4matter-web GitHub](https://github.com/cocode/book4matter-web).
 
 You can get a docker container for Book4matter with
 
 ```docker pull book4matter/book4matter```
 
-You can get the source for Book4matter here: [Book4matter GitHub](https://github.com/cocode/Book4matter/)
+Source: [Book4matter GitHub](https://github.com/cocode/Book4matter/)
 
 
 # Overview

@@ -23,7 +23,7 @@ The book4matter manual — this tool documenting itself.
 
 ## A novel
 
-*The Smallest Fire* — fiction, to show the pipeline on plain prose.
+*The Smallest Fire* — An example to show the pipeline on plain text input. (AI generated)
 
 - [HTML](https://book4matter.com/examples/novel/the-smallest-fire.html)
 - [Shareable PDF](https://book4matter.com/examples/novel/the-smallest-fire.pdf)
