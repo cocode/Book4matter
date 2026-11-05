@@ -217,7 +217,7 @@
       }
     }
     let body = [#title]
-    if child { body = [↳ #body] }
+    if child { body = [> #body] }
     if pages.len() > 0 {
       body = grid(
         columns: (auto, 1fr, auto), column-gutter: 0.4em,

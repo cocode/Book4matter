@@ -227,7 +227,7 @@ under **Practice hold**, with an indented **polka** entry:
 
 ```text
 Practice hold ................ 22
-    ↳ polka .................. 23
+    > polka .................. 23
 ```
 
 Use `|` to separate the visible words from the index wording, as with other
@@ -256,7 +256,7 @@ its own anchor, such as `idx-practice-hold-polka-1`, excluded from the contents
 in every format.
 
 Index rows have dot leaders between the term and its locations, and every
-subentry has a `↳` marker as well as indentation. In HTML and EPUB, the numbers
+subentry has a `>` marker as well as indentation. In HTML and EPUB, the numbers
 on the right are linked occurrence numbers (1, 2, and so on), not fixed page
 numbers. The column is labelled **Refs**; each number opens an indexed
 occurrence. The term itself also links to the first definition. Automatically

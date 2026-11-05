@@ -117,7 +117,7 @@ class TermMarkup(unittest.TestCase):
         self.assertNotIn('id="idx-practice-hold-polka-1"', html.split('</nav>')[0])
         self.assertGreaterEqual(html.count('<ul>'), 3)
         self.assertIn('class="index-leader"', html)
-        self.assertIn('class="index-label">↳ ', html)
+        self.assertIn('class="index-label">&gt; ', html)
         self.assertIn('class="index-locations"', html)
 
     @unittest.skipUnless(shutil.which('typst'), 'typst is not available')
@@ -168,7 +168,7 @@ class TermMarkup(unittest.TestCase):
                     self.assertFalse(any('bold' in font.lower() for font in parent_fonts), parent_fonts)
                     self.assertFalse(long_horizontal_rules, long_horizontal_rules)
                     self.assertIn('polka', text)
-                    self.assertIn('↳', text)
+                    self.assertRegex(text, r'>\s*polka')
                     self.assertIn('....', text.replace(' ', ''))
                     self.assertIn('Waltz', text)
                     self.assertIn('Viennese', text)
@@ -188,7 +188,7 @@ class TermMarkup(unittest.TestCase):
                 self.assertEqual(pages.count('id="idx-practice-hold-polka-1"'), 1)
                 self.assertIn('href="https://example.com"', pages)
                 self.assertIn('>polka</a>', pages)
-                self.assertIn('↳', pages)
+                self.assertIn('class="index-label">&gt; ', pages)
                 self.assertIn('class="index-leader"', pages)
                 self.assertIn('#idx-practice-hold-polka-2"', pages)
                 self.assertIn('>Viennese</a>', pages)
@@ -221,7 +221,7 @@ class TermMarkup(unittest.TestCase):
             self.assertGreaterEqual(len(groups), 3)
             self.assertNotIn('(continued)', groups[0])
             for text in groups:
-                self.assertIn('↳', text)
+                self.assertRegex(text, r'>\s*Child')
                 self.assertIn('Child', text)
                 self.assertIn('....', text.replace(' ', ''))
             for text in groups[1:]:

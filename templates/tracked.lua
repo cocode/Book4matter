@@ -381,7 +381,7 @@ end
 
 local function term_row(entry, child, prefix)
   local label = pandoc.List()
-  if child then label:extend({pandoc.Str("↳"), pandoc.Space()}) end
+  if child then label:extend({pandoc.Str(">"), pandoc.Space()}) end
   if #entry.anchors == 0 then
     label:insert(pandoc.Str(entry.title))
   else
