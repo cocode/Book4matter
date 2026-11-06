@@ -1,11 +1,13 @@
-# See it in action
+# Examples: see it in action {#examples}
 
 These three books are built by this same pipeline on every commit, in all four
 forms. Everything below came from Markdown — no hand-editing of the output.
 
 ## The manual
 
-The book4matter manual — this tool documenting itself.
+The [Book4matter user manual](https://book4matter.com/examples/docs/book4matter.html)
+explains how to write, configure, and build your books. It is also a working
+example of the tool documenting itself.
 
 - [HTML](https://book4matter.com/examples/docs/book4matter.html)
 - [Shareable PDF](https://book4matter.com/examples/docs/book4matter.pdf)

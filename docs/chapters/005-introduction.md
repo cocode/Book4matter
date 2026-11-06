@@ -1,4 +1,14 @@
-## Introduction {.unnumbered}
+<nav class="site-nav" aria-label="Book4matter navigation">
+<a href="https://book4matter.com/">Home</a>
+<a href="https://book4matter.com/examples/docs/book4matter.html" aria-current="page">Documentation</a>
+<a href="https://book4matter.com/#examples">Examples</a>
+<a href="https://app.book4matter.com/">Web app</a>
+</nav>
+
+## User manual {#introduction .unnumbered}
+
+This is the **Book4matter user manual**: documentation for writing, configuring,
+and publishing your books.
 
 *Book4matter* turns a folder of text formatted with Markdown into four outputs: a print-ready
 interior PDF for Amazon Kindle Direct Publishing (KDP), a digital PDF to send to
