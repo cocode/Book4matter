@@ -1,0 +1,68 @@
+/* Standalone HTML defaults. EPUB keeps its own reader-friendly layout.
+   An optional book_style.css can override these embedded rules. */
+html { scroll-behavior: smooth; }
+body {
+  box-sizing: border-box;
+  max-width: 52rem;
+  margin: 0 auto;
+  padding: 2rem;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.125rem;
+  line-height: 1.7;
+  text-align: left;
+  color: #242424;
+  background: #fffdfa;
+}
+p { margin: 0 0 1em; text-indent: 0; }
+h1, h2, h3, h4, h5, h6 {
+  text-transform: none;
+  letter-spacing: normal;
+  scroll-margin-top: 1.5rem;
+  break-after: auto;
+  page-break-after: auto;
+}
+h1 { text-align: left; }
+section { margin-bottom: 2.5rem; }
+a { color: #2f5d8a; text-underline-offset: 0.15em; }
+a:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+img { max-width: 100%; height: auto; }
+pre { overflow-x: auto; }
+table { display: block; max-width: 100%; overflow-x: auto; }
+#title-block-header { margin-bottom: 2.5rem; }
+#title-block-header .title { margin-top: 0; }
+#TOC {
+  box-sizing: border-box;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  background: #f3f1ec;
+  font-family: system-ui, sans-serif;
+  font-size: 0.95rem;
+  text-align: left;
+}
+#TOC::before { content: 'Contents'; display: block; font-weight: bold; margin-bottom: 1rem; }
+#TOC ul { list-style: none; margin: 0; padding: 0; }
+#TOC ul ul { padding-left: 1rem; }
+#TOC li { margin: 0.4em 0; }
+#TOC a { display: block; padding: 0.25em 0; text-decoration: none; }
+#TOC a:hover { text-decoration: underline; }
+#TOC .part-label, #TOC .chapter-label { font-size: 0.8em; }
+@media screen and (min-width: 901px) {
+  body:has(#TOC) {
+    max-width: none;
+    margin-left: 18rem;
+    padding: 3rem max(2rem, calc((100% - 52rem) / 2));
+  }
+  #TOC {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: 18rem;
+    height: 100vh;
+    margin: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border-right: 1px solid #ddd8ce;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}
