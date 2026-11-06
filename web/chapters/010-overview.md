@@ -10,7 +10,7 @@ It was built to take a manuscript to Amazon KDP without worrying about formattin
 
 TBH, Book4matter is not really designed as a website builder. But using it to build its own website seemed reasonable. 
 
-Book4matter is available as a web app, and also as command line tool. 
+Book4matter is available as a web app, a prebuilt docker container and as source. 
 
 The web version is at [app.book4matter.com](http://app.book4matter.com).
 
