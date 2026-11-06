@@ -4,6 +4,7 @@
 <a href="https://book4matter.com/examples/docs/book4matter.html">User Manual</a>
 <a href="#examples">Examples</a>
 <a href="https://app.book4matter.com/">Web app</a>
+<a href="https://github.com/cocode/Book4matter/">GitHub</a>
 </nav>
 ```
 
