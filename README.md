@@ -5,8 +5,8 @@ See our web page at https://book4matter.com/ and our
 
 Book4matter is a tool for formatting books for publication. It takes plain text or Markdown (pandoc flavored) and converts it to:
 
-1. PDF for printing
-1. PDF for sharing, as a PDF
+1. PDF for online use (has hyperlinks)
+1. PDF for printing (has page numbers)
 2. ePub
 3. HTML
 
@@ -14,30 +14,20 @@ This project uses pandoc to convert plain text or Markdown to HTML or ePub. For 
 
 Using Markdown rather than plain text will give you more control of the output, and allow features like hyperlinks and images.
 
-Book4matter is a command line tool, for now, so it's probably best for people that are comfortable with that.
+Book4matter is a command line tool. See [Book4matter Web](https://github.com/cocode/book4matter-web) if you want a no-install, drag and drop experience. 
 
-## Docker Build
+## Quick Start
 
-This project is built on docker, for security/isolation. There is no reason it could not just be run locally, but our examples use the provided ./run.sh which expects docker to be installed.
+See the (Quick Start) on the Book4matter website.
 
-You can get the latest docker image with:
 
-```
-docker pull book4matter/book4matter
-```
-
-We are working on a webapp version, which will require no install.
 
 ## Documentation
 
-Full documentation is available in ./docs. The documentation is, of course, formatted with 
-Book4matter. This lets you quickly tests if your setup is working. 
+Full documentation is available in ./docs in the source install. But the [user manual](https://book4matter.com/examples/docs/book4matter.html) is also available online.
 
-```bash
-./run.sh html docs
-```
+The documentation is, of course, formatted with Book4matter. This lets you quickly tests if your setup is working. 
 
-This will give you HTML formatted documentation in the ./docs/out directory.
 
 See [DESIGN.md](DESIGN.md) for the full design and rationale.
 
