@@ -1,226 +1,138 @@
-# Book4matter — Design
+# How Book4matter fits together
 
-A pipeline that turns Markdown into a print-ready PDF for **Amazon Kindle Direct
-Publishing (KDP)** paperback interiors, epub or html. Markdown is the single source of truth;
-everything runs inside Docker (no host installs).
+Book4matter turns a folder of Markdown or plain text into a book: a print
+interior PDF, a screen PDF, an EPUB, or HTML. The same manuscript feeds all four.
+Pandoc handles the document structure and the reflowable formats; Typst handles
+page layout for the PDFs. Python connects the pieces.
 
-## Goals & scope
+This is a map of the code for anyone changing it. Settings and instructions
+belong in the [user manual](docs/chapters/005-introduction.md).
 
-- **Input:** one or more Markdown files (`chapters/*.md`) or text files (`chapters/*.txt`) plus a `book_metadata.yaml`
-  file and a book_style.md file.
-- PDF print **Output (v1):** a 6×9-inch, black-and-white **paperback interior PDF**
-  (`out/title-interior.pdf`). No hyperlinks. Table of contents and index have page numbers. No cover.
-- PDF online **Output (v1):** a 6×9-inch, black-and-white **
-  (`out/title.pdf`). Table of contents and index have clickable links. Cover is optional
-- EPUB, as a parallel Pandoc target — which is *why* the pipeline
-  routes Markdown → Pandoc → Typst rather than authoring directly in Typst
-  (Typst alone cannot produce EPUB; Pandoc can feed both).
-- HTML - Single Page HTML. 
+## The pipeline
 
-## Why Pandoc → Typst → PDF
-
-```
-                       ┌───────────────────────┐
-   chapters/*.md ─┐    │  book_metadata.yaml   │ (title, author, trim, margins, font…)
-                  │    └──────┬───────┘
-                  ▼           │
-              pandoc ─t typst │ generates a Typst *body fragment*
-                  │           ▼
-                  │     templates/book.typ  (geometry + styling)
-                  ▼           │
-              typst compile ──┘ ───────────────▶  out/interior.pdf
+```mermaid
+flowchart TD
+    source["Chapters + metadata + style + assets"] --> bf["Python: load config, order chapters, prepare inputs"]
+    bf --> pdf["Pandoc + PDF Lua filters"]
+    bf --> reflow["Pandoc + EPUB/HTML Lua filters"]
+    pdf --> body["Typst body"]
+    bf --> meta["Typst metadata"]
+    body --> typst["Typst + book.typ"]
+    meta --> typst
+    typst --> print["Print interior PDF"]
+    typst --> screen["Screen PDF"]
+    reflow --> epub["EPUB + navigation checks + epubcheck"]
+    reflow --> html["HTML + post-processing"]
 ```
 
-- **Pandoc** parses Markdown and sends PDFs to Typst, or generates the ePub and HTNL itself.
-- **Typst** does the typesetting. It is fast, has no enormous TeX install, and
-  the official `pandoc/typst` Docker image bundles both tools.
+The branches share book content and settings, but they don't all do the same
+layout work. A PDF needs page numbers, margins, and deliberate page breaks.
+An EPUB leaves pagination to the reader. That's why Typst sits on the PDF
+branch instead of being the source format for everything.
 
-## Template strategy
+## What goes in, and who owns it
 
-`templates/book.typ` is a thin, hand-rolled Typst template that **owns the
-print-critical geometry**:
+Most of the orchestration lives in [bf/__main__.py](bf/__main__.py). It loads
+`book_style.yaml` and `book_metadata.yaml` into one dictionary; metadata wins
+when both contain the same key. The split between appearance and book identity
+is a convention, not two separate configuration systems.
 
-- exact **6×9 trim** (`page(width: 6in, height: 9in)`),
-- an **asymmetric binding gutter** (`margin: (inside:, outside:, …)`) — KDP
-  requires a larger inside margin that scales with page count,
-- **embedded fonts** (automatic in Typst),
-- running page numbers and chapter styling.
+Chapters come from an explicit `chapters` list or from the `.md` and `.txt` files
+in `chapters/`, sorted naturally by filename. Plain text is protected before
+Pandoc sees it, so punctuation doesn't accidentally become Markdown. Source
+files stay untouched; rewritten inputs go into temporary files and finished
+books go into `out/`.
 
-The *styling* (title page, table of contents, chapter headings) is adapted from
-the **ilm** Typst template (MIT-0 licensed, so freely reusable).
+The PDF preprocessor also figures out the book's structure. Normally H1 means
+a part and H2 means a chapter. Flat books can use H1 for chapters, and files
+without headings can become numbered, untitled chapters. This logic lives in
+`preprocess_chapters`, before Pandoc runs. EPUB and HTML have their own input
+preparation, so a change to PDF heading behavior doesn't automatically carry
+across to them.
 
-## Fonts
+## Where the formatting happens
 
-Default body font is **Libertinus Serif**, which is bundled inside the Typst
-binary (it is *not* a Google webfont) — so there is zero font-download and zero
-font supply-chain surface. The font is configurable in `book.yaml`. When a
-different face is wanted, a properly licensed font file is vendored into the
-Docker image rather than fetched at runtime.
+The Lua filters in [templates/](templates/) work on Pandoc's parsed document.
+They handle things ordinary Markdown doesn't express on its own: part dividers,
+wrapped images, numbered items, cross-references, and indexes.
 
-## Input model
+Filter order matters. On the PDF path, `tracked.lua` runs before `wrap.lua`,
+which runs before `parts.lua`. References must be resolved into Typst calls
+before a wrapped section becomes opaque raw Typst; page breaks must be added
+after that section is packaged. EPUB and whole-book HTML use `tracked.lua`,
+`epub-wrap.lua`, and `epub-parts.lua` instead. Shared Lua helpers live in
+`_common.lua`.
 
-- `book.yaml` holds all metadata and build options (title, author(s), trim,
-  margins, font, etc.).
-- Chapter order: an explicit `chapters:` list in `book.yaml` if present;
-  otherwise `chapters/*.md` sorted by filename.
-- Each level-1 heading (`# …`) becomes a chapter.
+[templates/book.typ](templates/book.typ) owns the PDF layout: page geometry,
+front matter, headings, running heads, folios, contents, and page-aware
+references. Python writes `_meta.typ` and Pandoc writes `_body.typ`; a small
+`main.typ` joins them with the template. Both PDF outputs use this same path.
+The print variant omits the cover and renders links for paper; the screen
+variant keeps live links and can include a cover. Trim and margins are
+configurable. Gutter defaults come from Python and an optional page-count hint;
+there's no automatic compile-and-adjust loop.
 
-### `book_metadata.yaml` (illustrative)
+EPUB and HTML use Pandoc's own writers, with `epub.css` shared between them and
+`html.css` adding the browser layout. Python finishes navigation and anchor
+checks, applies HTML-only additions, and runs epubcheck for EPUB validation
+unless it's disabled. HTML also has separate contents-only and chapter-fragment
+paths; those aren't the full-book pipeline with the outer tags removed.
 
-```yaml
-title: "The Example Book"
-subtitle: "A Demonstration of the Pipeline"
-author: "Jane Author"          # string or a list
-year: 2026
-publisher: "Self-Published"
-rights: "© 2026 Jane Author. All rights reserved."
-isbn: ""
-language: en
+Tracked items are a useful example of the division of work. The Lua filter
+checks definitions and references across the book. For PDFs it emits calls that
+let Typst handle numbering and page locations. For reflowable output it supplies
+the numbers and links itself, because there are no fixed pages to refer to.
 
-chapters:                      # optional explicit order
-  - chapters/010-introduction.md
-  - chapters/020-on-typography.md
-```
+## Files, tools, and the edges of the system
 
+[run.sh](run.sh) is the host-side Docker wrapper. The image contains Python,
+Pandoc, Typst, fonts, templates, and the validation tools. Normal builds mount
+the source tree read-only and make the target book's `out/` writable. Import and
+imposition have different write boundaries because they produce different
+files. `bf all` simply runs the four output builds in sequence.
 
-### `book_style.yaml` (illustrative)
+Asset paths are part of the contract. PDF intermediates live in `out/`, with
+Typst's root set to the book directory; `../media/image.png` therefore reaches
+the book's `media/` directory. EPUB and HTML use Pandoc resource paths covering
+`chapters/` and the book root. Moving intermediate files or changing staging
+needs care here. PDF builds also expose a book's `fonts/` directory to Typst;
+EPUB uses reader-selected fonts rather than embedding those files.
 
-```yaml
+Word import is a separate preparation step: Pandoc extracts Markdown and media,
+then Python splits the manuscript into chapter files. PDF imposition is a
+separate finishing step: `_signature_sides` computes page order and `impose_pdf`
+uses pypdf to scale and merge pages, then compresses the resulting streams.
+Neither operation belongs inside the typesetting template. Printing and binding
+guidance lives in the [manual's impose section](docs/chapters/110-command-line.md#impose).
 
-trim: 6x9                      # or a {width, height} mapping
-margins:                       # inches; omit to use page-count-based defaults
-  inside: 0.875
-  outside: 0.625
-  top: 0.75
-  bottom: 0.75
+## book4matter-web
 
-font: "Libertinus Serif"       # body face (must be findable; see fonts/ below)
-heading-font: "Liberation Sans" # title page, part/chapter labels, headings
-font-size: 11pt
-line-height: 1.4
-toc: true
-running-heads: false           # true -> book title (verso) / chapter (recto)
-                               # small-caps heads on body pages; print only
+[book4matter-web](https://github.com/cocode/book4matter-web) is the browser app
+in a separate repository. Conversion happens on the user's device in a web
+worker. It runs the Python engine through Pyodide and uses WebAssembly builds
+of Pandoc and Typst, with an adapter translating the engine's tool calls into
+browser operations. There's no conversion server behind it.
 
-```
+The web build copies this repository's `bf/` and `templates/` from a selected
+publishing revision. That keeps much of the formatting shared, but the web app
+owns upload handling, its virtual filesystem, runtime integration, and downloads.
+It also has different constraints: for example, it doesn't run Java epubcheck.
+Changes to tool arguments, file paths, or generated files can affect the browser
+adapter as well as the CLI, so check that integration when changing those
+boundaries. The `web/` folder here is the source for the Book4matter website,
+not the browser app.
 
-### Custom fonts (print)
+## Finding the right place to make a change
 
-Drop `.ttf` / `.otf` files into `<bookdir>/fonts/` and reference them by family
-name from `font:` / `heading-font:` in `book.yaml`. `bf print` automatically
-passes `--font-path <bookdir>/fonts` to typst when the directory exists, so the
-fonts travel with the book project (no system installs, no image rebuilds).
-System fonts are still searched, so a missing `fonts/` dir is fine. The font's
-license must permit embedding in a PDF — the build will silently embed
-whatever's used.
+Start with Python for input handling, configuration, and build orchestration;
+Lua for document structure; Typst for PDF layout; and CSS for EPUB/HTML
+appearance. A new setting usually needs Python to pass it through as well as a
+template or filter to consume it. Templates are copied into the Docker image,
+so an existing image can contain older code than the working tree.
 
-EPUB intentionally does NOT embed custom fonts; `epub.css` specifies generic
-`serif` / `sans-serif` families and lets the reader device pick.
-
-## `.docx` import
-
-Many manuscripts start life in Word. `bf import` converts a `.docx` into the
-Markdown the pipeline expects:
-
-```
-manuscript.docx
-   │  pandoc (docx → pandoc-markdown, --extract-media)
-   ▼
-fence-aware split on every level-1 heading
-   ├─▶ chapters/000-frontmatter.md  (content before the first H1, for review)
-   ├─▶ chapters/010-slug.md, 020-slug.md …
-   └─▶ media/                       (extracted images)
-```
-
-- **Markdown flavor:** Pandoc Markdown — most faithful to the Word source and
-  round-trips perfectly into the build. Hand-cleanup is expected afterward.
-- **Split:** fence-aware, so a `#` inside a code block is never mistaken for a
-  chapter break. Content before the first H1 goes to `000-frontmatter.md` (the
-  template generates its own title page + TOC, so this is usually trimmed).
-- **Numbering:** three-digit, step-of-10 (`010`, `020`, …). Leaves gaps to slot
-  hand-written inserts (part dividers, appendices) without renumbering siblings.
-- **Images:** extracted to `media/`; chapter files reference them as
-  `../media/…` so they resolve both in the build and in Markdown previews.
-- `--track-changes=accept`, comments dropped, ATX headings, no hard-wrapping.
-- The importer refuses to overwrite a non-empty `chapters/` unless `--force`.
-
-## Image paths (how they resolve)
-
-Images live in `media/` at the book root. Chapter files reference `../media/x`.
-The build generates intermediate Typst under `out/`, and compiles with
-`typst --root <bookdir>`, so `../media/x` resolves to `<bookdir>/media/x` from
-both the chapter files and the generated Typst. No path rewriting at build time.
-
-## Margins / binding gutter
-
-KDP's minimum inside (gutter) margin scales with page count:
-
-| Page count | Min. inside margin |
-|------------|--------------------|
-| ≤ 150      | 0.375 in           |
-| 151–300    | 0.5 in             |
-| 301–500    | 0.625 in           |
-| 501–700    | 0.75 in            |
-| 701+       | 0.875 in           |
-
-`book.yaml` margins win if specified. Otherwise `--pages N` selects a
-gutter-aware default; with no hint, a comfortable fixed default is used. A future
-enhancement can auto-iterate (compile → count pages → recompile) for an exact
-gutter.
-
-## Home binding (imposition)
-
-Separate from the KDP interior (which a print house imposes for you), `bf impose`
-lets you print a book on a home printer and bind it by hand. It takes any PDF and
-lays its pages **two-up on landscape sheets** so that, printed double-sided and
-folded down the middle, the sheets read in order.
-
-- Pages stay portrait and are **scaled to fit** each half-sheet cell (minus a
-  safe margin), so the source trim size is irrelevant — a 6×9 interior and a 5×8
-  one both work.
-- Pages are grouped into **signatures** (default 4 sheets = 16 pages, settable
-  with `--signature`; `--single` makes one saddle-stitch booklet). The last
-  signature is padded with blanks to a multiple of 4. Within each signature the
-  standard booklet order (front `[hi, lo]`, back `[lo+1, hi-1]`, walking inward)
-  is emitted front,back,… for **duplex printing (flip on short edge)**.
-- Implemented with `pypdf` (added to the image via `apk add py3-pypdf`, in
-  keeping with `vendor/README.md`: Python deps come from `apk`, not vendored
-  wheels). No host install.
-- The imposed PDF is written **next to its input** (`docs/out/x-interior.pdf` →
-  `docs/out/x-signatures.pdf`); `run.sh` makes just that one directory writable.
-  Unlike the other subcommands, impose has no `<bookdir>/out` notion — it acts on
-  a single PDF wherever it lives.
-- pypdf writes merged page content and copied form XObjects uncompressed, so
-  before writing, impose re-deflates every unfiltered stream (lossless). Without
-  it the imposed file is several times the input's size; with it, it's about the
-  same.
-
-Fold/trim marks are intentionally omitted (pypdf has no vector-drawing API, and
-scaled pages carry no bleed to trim — fold at the obvious centre).
-
-## Tooling & invocation
-
-- **Docker image:** `FROM pandoc/typst` + `python3` + `py3-yaml`. The `bf` CLI
-  and `templates/` are copied in. `ENTRYPOINT` is `python3 -m bf`.
-- **CLI (`bf`):** a thin Python orchestrator.
-  - `bf print [bookdir] [--pages N] [--keep]`
-  - `bf epub  [bookdir] [--no-check]`
-  - `bf import <file.docx> [bookdir] [--no-split] [--force]`
-  - `bf impose <file.pdf> [--paper P] [--signature N] [--single] [-o NAME]`
-- **Host wrapper (`run.sh`):** builds the image if missing, then runs the
-  container with the current directory mounted at `/work`.
-
-```bash
-./run.sh print example/          # → example/out/interior.pdf
-./run.sh import manuscript.docx  # → chapters/*.md + media/
-```
-
-Nothing is ever installed on the host; the wrapper only shells into the
-container.
-
-## Build order
-
-1. `Dockerfile`
-2. `templates/book.typ` + Pandoc wiring (get a compiling PDF)
-3. example book
-4. `import` command
+The Python tests under `tests/test_*.py` cover preprocessing, tracked items, and
+index behavior. The fixture books and `tests/run.sh` exercise generated EPUB,
+HTML, and selected PDF behavior, including imposition. `example/`, `novel/`,
+`docs/`, and `web/` are also real book projects. Pick the outputs affected by a
+change, and look at the rendered result when changing layout: a successful
+compile won't tell you whether a chapter opener looks right.
