@@ -17,7 +17,7 @@
 :root {
   --side-w: 300px;        /* sidebar width            */
   --head-h: 86px;         /* fixed title bar height   */
-  --measure: 720px;       /* reading column max-width */
+  --measure: 960px;       /* reading column max-width */
 
   --bg:        #fbfaf8;   /* page background          */
   --bg-side:   #f3f1ec;   /* sidebar background       */
@@ -47,14 +47,18 @@
 
 html { scroll-behavior: smooth; }
 
-body {
+/* Match the default HTML sidebar selector so its margin and padding do not
+   stack with this theme's sidebar. The reading column supplies its own cap. */
+body,
+body:has(#TOC) {
   font-family: var(--serif);
   font-size: 19px;
   line-height: 1.72;
   color: var(--ink);
   background: var(--bg);
+  max-width: none;
   margin: 0;
-  padding-left: var(--side-w);
+  padding: 0 0 0 var(--side-w);
   text-align: left;          /* override justify */
   -webkit-hyphens: none;
   hyphens: none;
@@ -67,7 +71,7 @@ body > section,
 body > .footnotes {
   max-width: var(--measure);
   margin: 0 auto;
-  padding: 8px 56px 96px;
+  padding: 8px 40px 96px;
   box-sizing: content-box;
 }
 body > section:first-of-type { padding-top: 64px; }
@@ -78,7 +82,7 @@ p {
 }
 
 /* Comfortable measure for prose; keep code/figures full width. */
-p, li, blockquote { max-width: 68ch; }
+p, li, blockquote { max-width: 80ch; }
 
 a {
   color: var(--accent);
@@ -466,7 +470,7 @@ section:target > h3::before {
    ================================================================ */
 
 @media (max-width: 900px) {
-  body { padding-left: 0; }
+  body, body:has(#TOC) { padding: 0; }
 
   #title-block-header {
     position: static;
