@@ -6,16 +6,16 @@ everything runs inside Docker (no host installs).
 
 ## Goals & scope
 
-- **Input:** one or more Markdown files (`chapters/*.md`) plus a `book_metadata.yaml`
+- **Input:** one or more Markdown files (`chapters/*.md`) or text files (`chapters/*.txt`) plus a `book_metadata.yaml`
   file and a book_style.md file.
-- PDF **Output (v1):** a 6×9-inch, black-and-white **paperback interior PDF**
-  (`out/interior.pdf`).
+- PDF print **Output (v1):** a 6×9-inch, black-and-white **paperback interior PDF**
+  (`out/title-interior.pdf`). No hyperlinks. Table of contents and index have page numbers. No cover.
+- PDF online **Output (v1):** a 6×9-inch, black-and-white **
+  (`out/title.pdf`). Table of contents and index have clickable links. Cover is optional
 - EPUB, as a parallel Pandoc target — which is *why* the pipeline
   routes Markdown → Pandoc → Typst rather than authoring directly in Typst
   (Typst alone cannot produce EPUB; Pandoc can feed both).
-- HTML  - This is a recent addition, and not heavily tested. 
-- **Out of scope:** the cover. The author supplies their own cover to KDP
-  separately. This pipeline produces the interior only.
+- HTML - Single Page HTML. 
 
 ## Why Pandoc → Typst → PDF
 
@@ -31,8 +31,7 @@ everything runs inside Docker (no host installs).
               typst compile ──┘ ───────────────▶  out/interior.pdf
 ```
 
-- **Pandoc** parses Markdown and converts it to a Typst body fragment, and keeps
-  the door open for EPUB later.
+- **Pandoc** parses Markdown and sends PDFs to Typst, or generates the ePub and HTNL itself.
 - **Typst** does the typesetting. It is fast, has no enormous TeX install, and
   the official `pandoc/typst` Docker image bundles both tools.
 
