@@ -21,18 +21,20 @@ Book4matter is available as a web app, a prebuilt docker container and as source
 
 The web version is at [app.book4matter.com](http://app.book4matter.com).
 
-Source: [Book4matter-web GitHub](https://github.com/cocode/book4matter-web).
+Source for web version: [Book4matter-web GitHub](https://github.com/cocode/book4matter-web).
 
 You can get a docker container for Book4matter with
 
 ```docker pull book4matter/book4matter```
 
 Or just pull the source, and install it locally. 
-Source: [Book4matter GitHub](https://github.com/cocode/Book4matter/)
+Source for command line version: [Book4matter GitHub](https://github.com/cocode/Book4matter/)
+
+Full User Manual is available here: [examples/docs/book4matter.html](examples/docs/book4matter.html)
 
  This webpage is rendered by Book4matter. It was written in Markdown.
 
-TBH, Book4matter is not really designed as a website builder. But using it to build its own website seemed reasonable. 
+> TBH, Book4matter is not really designed to be a website builder. But using it to build its own website seemed reasonable. 
 
 # Overview
 
