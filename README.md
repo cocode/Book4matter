@@ -1,6 +1,7 @@
 # Book4matter   (Book Formatter)
 
-See our web page at https://book4matter.com/
+See our web page at https://book4matter.com/ and our 
+[Book4matter Web](https://github.com/cocode/book4matter-web) GitHub.
 
 Book4matter is a tool for formatting books for publication. It takes plain text or Markdown (pandoc flavored) and converts it to:
 
