@@ -3,7 +3,7 @@
 These three books are built by this same pipeline on every commit, in all four
 forms. Everything below came from Markdown — no hand-editing of the output.
 
-## The manual
+## The user manual
 
 The [Book4matter User Manual](https://book4matter.com/examples/docs/book4matter.html)
 explains how to write, configure, and build your books. It is also a working
