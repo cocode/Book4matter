@@ -150,6 +150,25 @@ class TestPureNovel(TmpBase):
 class TestPlainText(TmpBase):
     SOURCE = "# Literal heading\n\n## Also literal\n\n*emphasis* [link](url) <b>html</b>\n\n---\n\n    indented text\n\n1. list\n\n```\ncode\n```\n"
 
+    def test_html_adds_chapters_without_changing_existing_headings(self):
+        sources = ["# Introduction\n\nWelcome.", self.SOURCE, "", "Next chapter."]
+        paths = [self.root / name for name in
+                 ("intro.md", "one.txt", "empty.txt", "two.md")]
+        for path, source in zip(paths, sources):
+            path.write_text(source)
+
+        def check(cmd, **kw):
+            bodies = [Path(arg).read_text() for arg in cmd[1:]]
+            self.assertEqual(bodies[0], sources[0])
+            self.assertEqual(bodies[1], "## Chapter 1 {.unnumbered}\n\n" + plain_text_markdown(self.SOURCE))
+            self.assertEqual(bodies[2], "")
+            self.assertEqual(bodies[3], "## Chapter 2 {.unnumbered}\n\nNext chapter.")
+
+        with patch("bf.__main__.run", side_effect=check):
+            run_chapter_pandoc(["pandoc", *map(str, paths)], paths,
+                               chapter_headings=True)
+        self.assertEqual([p.read_text() for p in paths], sources)
+
     def test_txt_does_not_define_titles_or_parts(self):
         heads, bodies, toc, no_parts = self.prep([("one.txt", self.SOURCE)])
         self.assertEqual(heads, ["##"])

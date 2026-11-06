@@ -41,8 +41,10 @@ change beyond the scope of styling.
 
 ### Restyling the website without touching the template
 
-The HTML output is styled by `epub.css`, but you need not edit that shared file
-to restyle the *site*. Every page that `bf html` generates links an optional
+The HTML output embeds `epub.css` followed by `html.css`, which adds a reading
+layout and a sidebar table of contents on wide screens. On smaller screens,
+the contents appear above the text. You need not edit either file to restyle
+the *site*. Every page that `bf html` generates links an optional
 `book_style.css` *after* the built-in styles, so any rules in that file win on the
 cascade. The file is optional: drop a `book_style.css` next to the generated page
 --- or have your build script copy one into `out/` --- and the site picks it up;

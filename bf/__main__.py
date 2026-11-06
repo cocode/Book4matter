@@ -579,14 +579,22 @@ def plain_text_markdown(text):
     return "\n".join(protect(line) for line in text.splitlines())
 
 
-def run_chapter_pandoc(cmd, chapters, **kw):
+def run_chapter_pandoc(cmd, chapters, chapter_headings=False, **kw):
     """Stage plain-text inputs as literal prose for reflowable outputs."""
     with tempfile.TemporaryDirectory(prefix="bf_text_") as scratch:
         replacements = {}
+        chapter_no = 0
         for i, chapter in enumerate(chapters):
-            if chapter.suffix.lower() == ".txt":
+            plain = chapter.suffix.lower() == ".txt"
+            text = read_text_icloud(chapter) if plain or chapter_headings else None
+            if plain:
+                text = plain_text_markdown(text)
+            if chapter_headings and text.strip() and not ({1, 2} & _scan_levels(text)):
+                chapter_no += 1
+                text = f"## Chapter {chapter_no} {{.unnumbered}}\n\n" + text.lstrip("\n")
+            if plain or chapter_headings:
                 staged = Path(scratch) / f"{i:03d}.md"
-                staged.write_text(plain_text_markdown(read_text_icloud(chapter)))
+                staged.write_text(text)
                 replacements[str(chapter)] = str(staged)
         run([replacements.get(str(arg), arg) for arg in cmd], **kw)
 
@@ -1070,12 +1078,14 @@ def build_html(bookdir):
                     f"--lua-filter={TEMPLATES / 'epub-wrap.lua'}",
                     f"--lua-filter={TEMPLATES / 'epub-parts.lua'}",
                     f"--css={TEMPLATES / 'epub.css'}", "--embed-resources",
+                    f"--css={TEMPLATES / 'html.css'}",
                     f"--css={blockquote_css_path}",
                     "--metadata", f"title={title or slug}",
                     "--metadata", f"lang={cfg.get('language', 'en')}",
                     "-o", str(html))
     try:
         run_chapter_pandoc(cmd, chapters, cwd=str(bookdir),
+                           chapter_headings=True,
                            env=filter_env(cfg, chapters))
     finally:
         blockquote_css_path.unlink(missing_ok=True)
@@ -1083,7 +1093,7 @@ def build_html(bookdir):
     # Link an optional per-book stylesheet, added AFTER pandoc's embedded styles
     # so its rules win on the cascade. The file is optional: drop a book_style.css
     # next to the page (or have a build script copy one into out/) to theme the
-    # site; leave it absent and the page falls back to the embedded epub.css.
+    # site; leave it absent and the page uses the embedded HTML defaults.
     # (`html toc` / `html chapter` emit fragments with no <head>, so no link.)
     head_link = '  <link rel="stylesheet" href="book_style.css" />\n'
     text = text.replace("</head>", head_link + "</head>", 1)
@@ -1153,7 +1163,7 @@ def build_html_toc(bookdir):
     cmd = _html_cmd(chapters, bookdir,
                     f"--lua-filter={TEMPLATES / 'toc-list.lua'}",
                     "-o", str(toc))
-    run_chapter_pandoc(cmd, chapters, cwd=str(bookdir))
+    run_chapter_pandoc(cmd, chapters, chapter_headings=True, cwd=str(bookdir))
     print(f"✓ wrote {toc}")
 
 
