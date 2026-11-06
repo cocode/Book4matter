@@ -1,9 +1,11 @@
+```{=html}
 <nav class="site-nav" aria-label="Book4matter navigation">
 <a href="https://book4matter.com/" aria-current="page">Home</a>
-<a href="https://book4matter.com/examples/docs/book4matter.html">Documentation</a>
-<a href="https://book4matter.com/#examples">Examples</a>
+<a href="https://book4matter.com/examples/docs/book4matter.html">User Manual</a>
+<a href="#examples">Examples</a>
 <a href="https://app.book4matter.com/">Web app</a>
 </nav>
+```
 
 ## Book4matter Home Page {.unnumbered}
 

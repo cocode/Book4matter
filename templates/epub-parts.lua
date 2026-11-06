@@ -21,6 +21,15 @@
 package.path = (PANDOC_SCRIPT_FILE:match("^(.*/)") or "./") .. "?.lua;" .. package.path
 local common = require("_common")
 
+-- Website navigation is a single raw block in the manuscript. EPUB accepts
+-- raw HTML too, so explicitly omit this toolbar from ebook editions.
+function RawBlock(block)
+  if FORMAT:match("^epub") and block.format:match("^html")
+      and block.text:match('^<nav class="site%-nav"') then
+    return {}
+  end
+end
+
 -- Document-wide counters. The pandoc invocation is given every chapter file
 -- at once, so these single state variables yield a consistent count across
 -- the whole book even when the EPUB is later split into multiple xhtml files.

@@ -17,7 +17,7 @@
 #     ./run.sh html docs/
 
 title: "Book4matter"
-subtitle: "User manual — Markdown to print, PDF, EPUB, and HTML"
+subtitle: "User Manual — Markdown to print, PDF, EPUB, and HTML"
 # A string, or a YAML list of names.
 author: "Thomas Hill"
 # Used as the EPUB date (<dc:date>).

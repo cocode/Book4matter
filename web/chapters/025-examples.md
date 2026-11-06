@@ -5,7 +5,7 @@ forms. Everything below came from Markdown — no hand-editing of the output.
 
 ## The manual
 
-The [Book4matter user manual](https://book4matter.com/examples/docs/book4matter.html)
+The [Book4matter User Manual](https://book4matter.com/examples/docs/book4matter.html)
 explains how to write, configure, and build your books. It is also a working
 example of the tool documenting itself.
 
