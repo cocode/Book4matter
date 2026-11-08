@@ -2,6 +2,11 @@
 
 Project-level todo list. Outlives sessions (unlike the harness TaskList tool).
 
+Change color scheme
+
+Make icon - looks like we have one. An alternative might be letters falling onto a books pages, like snow (maybe falling like the matrix)
+
+
 Edit freely; Claude reads and writes it on request.
 
 word input comes in with h1 as parts, but most people would use h1 for chapter headings. We need a switch for this.
