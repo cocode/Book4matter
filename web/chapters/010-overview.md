@@ -8,9 +8,7 @@
 </nav>
 ```
 
-## Book4matter Home Page {.unnumbered}
-
-![](../../docs/media/book4matter-logo.png){.center width="1.5in"}
+## ![](../../docs/media/book4matter-logo.png){width="1.5em" style="vertical-align: middle"} Book4matter Home Page {.unnumbered}
 
 **Write in Markdown. Publish everywhere.** 
 Book4matter (Book Formatter) takes in Markdown, or plain text, and formats it for distribution. It uses this one source to produce output in HTML, EPUB, PDF and print versions. (PDF versions have clickable links, print has page references).
