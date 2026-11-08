@@ -1,6 +1,6 @@
 # Book4matter   (Book Formatter)
 
-<img src="book4matter_logo.png" alt="Book4matter logo" width="150">
+<img src="docs/media/book4matter-logo.png" alt="Book4matter logo" width="150">
 
 See our web page at https://book4matter.com/ and our 
 [Book4matter Web](https://github.com/cocode/book4matter-web) GitHub.
