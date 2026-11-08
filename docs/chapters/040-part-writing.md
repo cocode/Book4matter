@@ -7,7 +7,7 @@ set. This part covers all three.
 
 ## Project Quickstart
 
-See the [Quick Start](#quick-start) for setup instructions
+See [Installing and Building](#installing-and-building) for setup instructions.
 
 A fast way to get started is to copy one of the provided examples, and then modify it
 to suit your needs.

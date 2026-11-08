@@ -116,8 +116,27 @@ sewn or glued into a codex.
 `impose` takes any PDF, not just a book4matter interior. The output is written
 next to its input, so `docs/out/book4matter-interior.pdf` produces
 `docs/out/book4matter-signatures.pdf`. Print the result double-sided, flipping on
-the short edge, then fold each signature down the middle. The page streams are
-Flate-compressed, so the imposed PDF stays about the size of the input.
+the short edge, then fold each signature down the middle. Keep the sheets in
+their output order, nest each signature's sheets, and stack the folded signatures
+in order for binding. Use the printer's actual-size (100%) setting; the PDF
+already has two book pages on each landscape sheet, so don't apply the printer's
+booklet or multiple-pages-per-sheet option again.
+
+Pages keep their orientation and are scaled proportionally to fit each
+half-sheet, with a safe margin around them. A 6×9 or 5×8 source will therefore
+work, but its printed pages may be smaller than the original trim size. The
+last signature is padded with blank pages to a multiple of four; it doesn't
+have to fill the chosen signature size. There are no fold or trim marks: fold
+at the centre of the sheet.
+
+For example, this makes four-sheet signatures on A4 paper:
+
+```
+./run.sh impose docs/out/book4matter-interior.pdf --paper a4 --signature 4
+```
+
+Print a signature first to check page order and duplex orientation before
+printing the whole book.
 
 - `--paper letter` or `--paper a4` --- the sheet you print on. The default is
   `letter`.

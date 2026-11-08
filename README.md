@@ -1,14 +1,16 @@
 # Book4matter   (Book Formatter)
 
+<img src="book4matter_logo.png" alt="Book4matter logo" width="150">
+
 See our web page at https://book4matter.com/ and our 
 [Book4matter Web](https://github.com/cocode/book4matter-web) GitHub.
 
 Book4matter is a tool for formatting books for publication. It takes plain text or Markdown (pandoc flavored) and converts it to:
 
-1. PDF for online use (has hyperlinks)
-1. PDF for printing (has page numbers)
-2. ePub
-3. HTML
+1. PDF for screen (links are clickable)
+1. PDF for print (links have page numbers)
+1. EPUB
+1. HTML
 
 This project uses pandoc to convert plain text or Markdown to HTML or ePub. For pdf/print, pandoc outputs to Typst, which does the print formatting. This setup allows you to generate EPUB, HTML and PDFs from the same source. It also separates the styling from the source, so you can apply the same style to multiple books, or change the style of multiple books by making a change in one place.
 
@@ -19,8 +21,6 @@ Book4matter is a command line tool. See [Book4matter Web](https://github.com/coc
 ## Quick Start
 
 See the (Quick Start) on the Book4matter website.
-
-
 
 ## Documentation
 

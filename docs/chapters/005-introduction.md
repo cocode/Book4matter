@@ -10,11 +10,13 @@
 
 ## User Manual {#introduction .unnumbered}
 
+![](../media/book4matter-logo.png){.center width="1.5in"}
+
 This is the **Book4matter User Manual**: documentation for writing, configuring,
 and publishing your books.
 
-*Book4matter* turns a folder of text formatted with Markdown into four outputs: a print-ready
-interior PDF for Amazon Kindle Direct Publishing (KDP), a digital PDF to send to
+*Book4matter* turns a folder of text formatted with Markdown into four outputs: a PDF for print
+ready for Amazon Kindle Direct Publishing (KDP), a PDF for screens to send to
 readers, an EPUB for e-readers, and a standalone HTML page for the web. You
 write once, in plain Markdown, and the same source produces all four.
 

@@ -1048,6 +1048,27 @@ def _html_cmd(chapters, bookdir, *extra):
             *extra]
 
 
+def label_html_footnotes(text):
+    """Label Pandoc's end-of-document notes and link them from its TOC."""
+    notes = re.search(r'<section id="([^"]+)" class="footnotes footnotes-end-of-document" '
+                      r'role="doc-endnotes">\s*<hr\s*/?>', text)
+    if not notes:
+        return text
+    # A manuscript heading called "Footnotes" can already own this ID.
+    base = anchor = notes[1]
+    ids = set(re.findall(r'\bid="([^"]+)"', text[:notes.start()] + text[notes.end():]))
+    n = 1
+    while anchor in ids:
+        n += 1
+        anchor = f"{base}-{n}"
+    section = (f'<section id="{anchor}" class="footnotes footnotes-end-of-document" '
+               'role="doc-endnotes">\n<h1>Footnotes</h1>')
+    text = text[:notes.start()] + section + text[notes.end():]
+    return re.sub(r'(<nav id="TOC"[^>]*>(?:(?!</nav>).)*?)(</ul>\s*</nav>)',
+                  lambda m: m[1] + f'<li><a href="#{anchor}">Footnotes</a></li>\n' + m[2],
+                  text, count=1, flags=re.DOTALL)
+
+
 def build_html(bookdir):
     """Whole book as one standalone HTML page with a clickable table of
     contents. Mirrors the EPUB pipeline (same wrap/parts filters and CSS) but
@@ -1090,6 +1111,7 @@ def build_html(bookdir):
     finally:
         blockquote_css_path.unlink(missing_ok=True)
     text = strip_index_ids_from_navigation(html.read_text())
+    text = label_html_footnotes(text)
     # Link an optional per-book stylesheet, added AFTER pandoc's embedded styles
     # so its rules win on the cascade. The file is optional: drop a book_style.css
     # next to the page (or have a build script copy one into out/) to theme the

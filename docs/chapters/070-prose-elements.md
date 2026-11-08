@@ -30,8 +30,10 @@ smaller and in italic, indented from both margins with air above and below:
 ### Footnotes
 
 Markdown footnotes work as usual. In the two PDF outputs they fall to the foot
-of the page; in EPUB and HTML they collect at the end of the chapter, linked
-from a superscript marker. The digital `pdf` output keeps its footnote markers
+of the page; in EPUB they collect at the end of the chapter. In the single-page
+HTML build, superscript markers link to a **Footnotes** section at the end of
+the book. The table of contents also links to that section when notes are present.
+The digital `pdf` output keeps its footnote markers
 clickable; the `print` output does not, because KDP rejects internal hyperlinks
 in print interiors.
 
