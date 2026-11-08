@@ -935,6 +935,10 @@ def clean_epub_index_navigation(epub):
         if info.filename.endswith(('.xhtml', '.html')):
             text = data.decode('utf-8')
             updated = strip_index_ids_from_navigation(text)
+            if info.filename == 'EPUB/nav.xhtml':
+                # Pandoc copies inline heading images from text/ch*.xhtml.
+                # The navigation file sits one directory closer to media/.
+                updated = re.sub(r'(<img\b[^>]*?\ssrc=")\.\./media/', r'\1media/', updated)
             documents.append((f"{epub}!/{info.filename}", updated))
             if updated != text:
                 changed = True

@@ -8,9 +8,7 @@
 </nav>
 ```
 
-## User Manual {#introduction .unnumbered}
-
-![](../media/book4matter-logo.png){.center width="1.5in"}
+## ![](../media/book4matter-logo.png){width="1.5em" style="vertical-align: middle"} User Manual {#introduction .unnumbered}
 
 This is the **Book4matter User Manual**: documentation for writing, configuring,
 and publishing your books.
