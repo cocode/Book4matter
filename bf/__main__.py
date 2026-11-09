@@ -1128,11 +1128,11 @@ def build_html(bookdir, use_parts=None):
         blockquote_css_path.unlink(missing_ok=True)
     text = strip_index_ids_from_navigation(html.read_text())
     text = label_html_footnotes(text)
-    # Link an optional per-book stylesheet, added AFTER pandoc's embedded styles
-    # so its rules win on the cascade. The file is optional: drop a book_style.css
-    # next to the page (or have a build script copy one into out/) to theme the
-    # site; leave it absent and the page uses the embedded HTML defaults.
-    # (`html toc` / `html chapter` emit fragments with no <head>, so no link.)
+    # Publish the book's stylesheet alongside the page. Keep the link even
+    # without a source stylesheet so hosts can supply their own at deploy time.
+    stylesheet = bookdir / "book_style.css"
+    if stylesheet.is_file():
+        shutil.copyfile(stylesheet, out / "book_style.css")
     head_link = '  <link rel="stylesheet" href="book_style.css" />\n'
     text = text.replace("</head>", head_link + "</head>", 1)
     # Optional cover image as the first thing in the body. Embedded as a data URI

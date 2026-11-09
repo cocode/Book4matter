@@ -8,7 +8,7 @@
 </nav>
 ```
 
-## ![](../../docs/media/book4matter-logo.png){width="1.5em" style="vertical-align: middle"} Book4matter Home Page {.unnumbered}
+## ![](../media/book4matter-logo.png){width="1.5em" style="vertical-align: middle"} Book4matter Home Page {.unnumbered}
 
 **Write in Markdown. Publish everywhere.** 
 Book4matter (Book Formatter) takes in Markdown, or plain text, and formats it for distribution. It uses this one source to produce output in HTML, EPUB, PDF and print versions. (PDF versions have clickable links, print has page references).
@@ -30,7 +30,7 @@ You can get a docker container for Book4matter with
 Or just pull the source, and install it locally. 
 Source for command line version: [Book4matter GitHub](https://github.com/cocode/Book4matter/)
 
-Full User Manual is available here: [examples/docs/book4matter.html](examples/docs/book4matter.html)
+Read the [full user manual](https://book4matter.com/examples/docs/book4matter.html).
 
  This webpage is rendered by Book4matter. It was written in Markdown.
 

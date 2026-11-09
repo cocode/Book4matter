@@ -30,11 +30,4 @@ formats=(print pdf html epub)
 cd "$ROOT"
 for fmt in "${formats[@]}"; do
   ./run.sh "$fmt" docs/ --build-id "$BUILD_ID"
-  if [[ "$fmt" == "html" ]]; then
-    # bf html links an optional book_style.css; supply it by copying our site
-    # stylesheet into out/ under that name. The tool emits the <link> itself, so
-    # there is nothing to inject here.
-    cp "$HERE/book4matter-web.css" "$HERE/out/book_style.css"
-    echo "✓ copied book4matter-web.css -> out/book_style.css" >&2
-  fi
 done

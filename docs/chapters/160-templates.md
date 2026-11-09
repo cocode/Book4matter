@@ -46,12 +46,10 @@ layout and a sidebar table of contents on wide screens. On smaller screens,
 the contents appear above the text. You need not edit either file to restyle
 the *site*. Every page that `bf html` generates links an optional
 `book_style.css` *after* the built-in styles, so any rules in that file win on the
-cascade. The file is optional: drop a `book_style.css` next to the generated page
---- or have your build script copy one into `out/` --- and the site picks it up;
-leave it out and the page falls back to the built-in styling. The page is plain,
+cascade. Place an optional `book_style.css` in the book directory. The HTML
+build copies it to `out/book_style.css` beside the generated page. The page is plain,
 semantic HTML --- a `#TOC` nav, one `section` per part and chapter, `.part-label`
 / `.chapter-label` spans --- so a stylesheet has clean hooks to target.
 
-This manual does exactly that: `docs/build.sh` copies its `book4matter-web.css`
-into `out/book_style.css`, giving the site its own look without disturbing the
-templates that the PDF, EPUB, and HTML outputs share.
+The manual and website both link their source `book_style.css` to the shared
+`docs/book4matter-web.css` stylesheet.
