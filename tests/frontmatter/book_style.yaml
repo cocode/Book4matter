@@ -1,2 +1,4 @@
 trim: 6x9
 running-heads: true
+
+use-parts: true

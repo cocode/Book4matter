@@ -39,3 +39,5 @@ toc: true
 running-heads: true
 # Rule between title and subtitle on the title page.
 title-rule: true
+
+use-parts: true

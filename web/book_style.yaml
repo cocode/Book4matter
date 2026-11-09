@@ -11,3 +11,5 @@ font: "Libertinus Serif"
 heading-font: "Liberation Sans"
 font-size: 11pt
 language: en
+
+use-parts: true

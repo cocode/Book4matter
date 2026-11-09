@@ -132,12 +132,12 @@ class TermMarkup(unittest.TestCase):
             (root / 'book_metadata.yaml').write_text('title: Subentry test\nauthor: Test\n')
             (root / 'book_style.yaml').write_text('toc: true\n')
             (root / 'chapters/01.md').write_text(
-                '## [[Practice hold]]\n\nThe general definition.\n\n'
-                '## [[polka hold|Practice hold>polka]]\n\n'
+                '# [[Practice hold]]\n\nThe general definition.\n\n'
+                '# [[polka hold|Practice hold>polka]]\n\n'
                 '[[[another hold|Practice hold>polka]]](https://example.com)\n\n'
                 '[[Viennese Waltz|Waltz>Viennese]]\n\n'
                 '[[[Tempo|Tempo;BPM;Beats per minute]]](https://example.com/tempo)\n\n'
-                '## Index {.section}\n\n{index:term}\n')
+                '# Index {.section}\n\n{index:term}\n')
             with patch.object(bf, 'TEMPLATES', ROOT / 'templates'):
                 bf.build_html(root)
                 bf.build_epub(root)
@@ -524,6 +524,7 @@ class IndexAnchorValidation(unittest.TestCase):
         import io
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
+            (root / "chapter.md").write_text("# Frame")
             def fake_pandoc(cmd, **kwargs):
                 Path(cmd[cmd.index('-o') + 1]).write_text(
                     '<nav><span id="idx-frame-1">Frame</span></nav>'

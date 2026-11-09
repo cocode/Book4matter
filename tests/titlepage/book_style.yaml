@@ -1,3 +1,5 @@
 trim: 6x9
 title-rule: true
 running-heads: true
+
+use-parts: true

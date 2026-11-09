@@ -179,7 +179,7 @@ class TestPlainText(TmpBase):
     def test_markdown_still_defines_structure_in_mixed_book(self):
         heads, bodies, toc, no_parts = self.prep([
             ("one.md", "# Part\n\n## Chapter\n\n*emphasis*"),
-            ("two.txt", self.SOURCE)])
+            ("two.txt", self.SOURCE)], use_parts=True)
         self.assertFalse(no_parts)
         self.assertTrue(toc)
         self.assertEqual(heads, ["# Part", "## Chapter 1 {.unnumbered}"])
@@ -229,7 +229,7 @@ class TestEmptyFiles(TmpBase):
 
 
 class TestFlatTitled(TmpBase):
-    """Only `#` headings: they are chapters, not parts (auto no-parts)."""
+    """Only `#` headings: they are chapters, not parts by default."""
 
     def test_hash_is_chapter_and_demoted(self):
         heads, _, show_toc, no_parts = self.prep(
@@ -243,32 +243,25 @@ class TestFlatTitled(TmpBase):
 
 
 class TestPartsPreserved(TmpBase):
-    """A book that uses `##` keeps the part/chapter hierarchy untouched."""
+    """Opting into parts preserves the part/chapter hierarchy."""
 
     def test_parts_not_demoted(self):
         heads, bodies, show_toc, no_parts = self.prep(
-            [("a.md", "# Part One\n\n## Chapter\n\nbody\n")])
+            [("a.md", "# Part One\n\n## Chapter\n\nbody\n")], use_parts=True)
         self.assertFalse(no_parts)
         self.assertTrue(show_toc)
         self.assertEqual(heads[0], "# Part One")   # still a part
         self.assertIn("## Chapter", bodies[0])     # still a chapter
 
 
-class TestScenesNeedNoParts(TmpBase):
-    """A file that writes `#`=chapter and `##`=scene is ambiguous: it looks
-    identical to parts+chapters, so auto-detection treats `#` as a part. The
-    author opts into the flat reading with --no-parts, which then demotes the
-    whole hierarchy one level."""
+class TestHeadingMode(TmpBase):
+    def test_parts_opt_in_with_only_top_level_headings(self):
+        heads, _, _, no_parts = self.prep([("part.md", "# Part One")], use_parts=True)
+        self.assertFalse(no_parts)
+        self.assertEqual(heads, ["# Part One"])
 
-    SRC = [("a.md", "# Chapter\n\n## Scene\n\nbody\n")]
-
-    def test_auto_treats_scenes_as_parts(self):
-        heads, bodies, _, no_parts = self.prep(self.SRC)
-        self.assertFalse(no_parts)                 # `##` present -> parts mode
-        self.assertEqual(heads[0], "# Chapter")    # left as written
-
-    def test_no_parts_makes_them_chapter_and_section(self):
-        heads, bodies, _, no_parts = self.prep(self.SRC, force_no_parts=True)
+    def test_default_makes_nested_headings_sections(self):
+        heads, bodies, _, no_parts = self.prep([("a.md", "# Chapter\n\n## Scene")])
         self.assertTrue(no_parts)
         self.assertEqual(heads[0], "## Chapter")   # was a part, now a chapter
         self.assertIn("### Scene", bodies[0])      # was a chapter, now a section

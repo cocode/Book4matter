@@ -579,23 +579,29 @@ def plain_text_markdown(text):
     return "\n".join(protect(line) for line in text.splitlines())
 
 
-def run_chapter_pandoc(cmd, chapters, chapter_headings=False, **kw):
+def run_chapter_pandoc(cmd, chapters, chapter_headings=False, use_parts=True, **kw):
     """Stage plain-text inputs as literal prose for reflowable outputs."""
     with tempfile.TemporaryDirectory(prefix="bf_text_") as scratch:
         replacements = {}
         chapter_no = 0
+        chapter_level = 2 if use_parts else 1
         for i, chapter in enumerate(chapters):
             plain = chapter.suffix.lower() == ".txt"
-            text = read_text_icloud(chapter) if plain or chapter_headings else None
+            if use_parts and not plain and not chapter_headings:
+                continue
+            text = read_text_icloud(chapter)
             if plain:
                 text = plain_text_markdown(text)
-            if chapter_headings and text.strip() and not ({1, 2} & _scan_levels(text)):
+            needs_heading = chapter_headings and text.strip() and not any(
+                level <= chapter_level for level in _scan_levels(text))
+            if not use_parts:
+                text = _demote_md(text)
+            if needs_heading:
                 chapter_no += 1
                 text = f"## Chapter {chapter_no} {{.unnumbered}}\n\n" + text.lstrip("\n")
-            if plain or chapter_headings:
-                staged = Path(scratch) / f"{i:03d}.md"
-                staged.write_text(text)
-                replacements[str(chapter)] = str(staged)
+            staged = Path(scratch) / f"{i:03d}.md"
+            staged.write_text(text)
+            replacements[str(chapter)] = str(staged)
         run([replacements.get(str(arg), arg) for arg in cmd], **kw)
 
 
@@ -659,7 +665,7 @@ def _mark_first_heading(text, cls):
     return "\n".join(lines)
 
 
-def preprocess_chapters(chapters, tmpdir, force_no_parts=False, toc=None,
+def preprocess_chapters(chapters, tmpdir, use_parts=False, toc=None,
                         running_heads=False):
     """Rewrite chapter files for novel / no-parts builds, into `tmpdir`.
 
@@ -671,9 +677,8 @@ def preprocess_chapters(chapters, tmpdir, force_no_parts=False, toc=None,
                      un-titled novel needs none, so auto-off there);
       * no_parts  -- whether parts were collapsed to chapters.
 
-    A book with no `##` anywhere -- or one built with --no-parts / `no-parts:
-    true` -- is a *flat* book: `#` means chapter (there is no such thing as a
-    book with parts but no chapters), so every heading is demoted one level. A
+    By default, demote every heading one level so `#` is a chapter. With
+    use_parts, retain the part/chapter hierarchy exactly as written. A
     file with no heading becomes an auto-numbered, title-less chapter. In a flat
     book that mixes titled and un-titled files, a titled file is a named section
     (Introduction, Afterword) -- shown with its title but skipped by the chapter
@@ -685,8 +690,7 @@ def preprocess_chapters(chapters, tmpdir, force_no_parts=False, toc=None,
     # Drop empty / whitespace-only files: one would otherwise become a blank
     # numbered chapter and consume a number.
     infos = [(f, text, _scan_levels(text)) for (f, text) in infos if text.strip()]
-    all_levels = set().union(*(lv for (_, _, lv) in infos)) if infos else set()
-    no_parts = force_no_parts or (2 not in all_levels)
+    no_parts = not use_parts
 
     # A "title" is a chapter-level heading: level 1 in a flat book; a part (1) or
     # a chapter (2) in a book that keeps parts.
@@ -724,7 +728,7 @@ def preprocess_chapters(chapters, tmpdir, force_no_parts=False, toc=None,
 # ---------------------------------------------------------------------- build
 
 def build_print(bookdir, pages=None, keep=False, build_id=None, links="print",
-                include_cover=False, no_parts=False):
+                include_cover=False, use_parts=None):
     """Build a PDF from a book directory.
 
     links="print" (the `print` target) drops internal-link annotations so the
@@ -740,6 +744,8 @@ def build_print(bookdir, pages=None, keep=False, build_id=None, links="print",
     print("print" if links == "print" else "pdf", file=sys.stderr, flush=True)
     bookdir = bookdir.resolve()
     cfg = load_config(bookdir)
+    if use_parts is None:
+        use_parts = cfg.get("use-parts", False)
     chapters = resolve_chapters(bookdir, cfg)
     if not chapters:
         die("no chapter .md files found")
@@ -754,11 +760,10 @@ def build_print(bookdir, pages=None, keep=False, build_id=None, links="print",
     # chapters, heading demotion) into a scratch dir. Originals stay untouched;
     # image links resolve the same, since print images resolve from out/ via
     # typst --root regardless of where the source markdown sits.
-    force_no_parts = no_parts or bool(cfg.get("no-parts", False))
     tmpdir = Path(tempfile.mkdtemp(prefix="bf_chapters_"))
     try:
         proc, show_toc, _ = preprocess_chapters(
-            chapters, tmpdir, force_no_parts=force_no_parts, toc=cfg.get("toc"),
+            chapters, tmpdir, use_parts=use_parts, toc=cfg.get("toc"),
             running_heads=bool(cfg.get("running-heads", False)))
         if not proc:
             die("no chapter content found (all chapter files are empty)")
@@ -951,10 +956,12 @@ def clean_epub_index_navigation(epub):
                 archive.writestr(info, data)
 
 
-def build_epub(bookdir, check=True, build_id=None):
+def build_epub(bookdir, check=True, build_id=None, use_parts=None):
     print("EPUB", file=sys.stderr, flush=True)
     bookdir = bookdir.resolve()
     cfg = load_config(bookdir)
+    if use_parts is None:
+        use_parts = cfg.get("use-parts", False)
     chapters = resolve_chapters(bookdir, cfg)
     if not chapters:
         die("no chapter .md files found")
@@ -1000,6 +1007,9 @@ def build_epub(bookdir, check=True, build_id=None):
            f"--resource-path={bookdir / 'chapters'}:{bookdir}",
            "-o", str(epub)]
 
+    if not use_parts:
+        cmd.insert(-2, "--split-level=2")
+
     cover = cfg.get("cover")
     if cover:
         cover_path = (bookdir / cover).resolve()
@@ -1020,7 +1030,7 @@ def build_epub(bookdir, check=True, build_id=None):
         cmd.insert(-2, f"--epub-cover-image={cover_path}")
 
     try:
-        run_chapter_pandoc(cmd, chapters, cwd=str(bookdir),
+        run_chapter_pandoc(cmd, chapters, use_parts=use_parts, cwd=str(bookdir),
                            env=filter_env(cfg, chapters))
     finally:
         meta_path.unlink(missing_ok=True)
@@ -1073,7 +1083,7 @@ def label_html_footnotes(text):
                   text, count=1, flags=re.DOTALL)
 
 
-def build_html(bookdir):
+def build_html(bookdir, use_parts=None):
     """Whole book as one standalone HTML page with a clickable table of
     contents. Mirrors the EPUB pipeline (same wrap/parts filters and CSS) but
     targets html5; --section-divs gives every heading a section id so the --toc
@@ -1081,6 +1091,8 @@ def build_html(bookdir):
     print("HTML", file=sys.stderr, flush=True)
     bookdir = bookdir.resolve()
     cfg = load_config(bookdir)
+    if use_parts is None:
+        use_parts = cfg.get("use-parts", False)
     chapters = resolve_chapters(bookdir, cfg)
     if not chapters:
         die("no chapter .md files found")
@@ -1110,7 +1122,7 @@ def build_html(bookdir):
                     "-o", str(html))
     try:
         run_chapter_pandoc(cmd, chapters, cwd=str(bookdir),
-                           chapter_headings=True,
+                           chapter_headings=True, use_parts=use_parts,
                            env=filter_env(cfg, chapters))
     finally:
         blockquote_css_path.unlink(missing_ok=True)
@@ -1168,7 +1180,7 @@ def build_html(bookdir):
     print(f"✓ wrote {html}")
 
 
-def build_html_toc(bookdir):
+def build_html_toc(bookdir, use_parts=None):
     """Just the table of contents, as a link-free HTML fragment for embedding
     on a website (the in-book anchors point nowhere off-site, so toc-list.lua
     drops them). Level-1 headings sit at the top level with level-2 headings
@@ -1176,6 +1188,8 @@ def build_html_toc(bookdir):
     print("HTML TOC", file=sys.stderr, flush=True)
     bookdir = bookdir.resolve()
     cfg = load_config(bookdir)
+    if use_parts is None:
+        use_parts = cfg.get("use-parts", False)
     chapters = resolve_chapters(bookdir, cfg)
     if not chapters:
         die("no chapter .md files found")
@@ -1189,7 +1203,7 @@ def build_html_toc(bookdir):
     cmd = _html_cmd(chapters, bookdir,
                     f"--lua-filter={TEMPLATES / 'toc-list.lua'}",
                     "-o", str(toc))
-    run_chapter_pandoc(cmd, chapters, chapter_headings=True, cwd=str(bookdir))
+    run_chapter_pandoc(cmd, chapters, chapter_headings=True, use_parts=use_parts, cwd=str(bookdir))
     print(f"✓ wrote {toc}")
 
 
@@ -1213,13 +1227,15 @@ def _pick_chapter(chapters, which):
         + ", ".join(c.name for c in chapters))
 
 
-def build_html_chapter(bookdir, which):
+def build_html_chapter(bookdir, which, use_parts=None):
     """One chapter as an HTML fragment (no page chrome, no auto Part/Chapter
     label -- that numbering is meaningless out of context). Handy for pulling a
     single chapter into a web page."""
     print(f"HTML chapter {which}", file=sys.stderr, flush=True)
     bookdir = bookdir.resolve()
     cfg = load_config(bookdir)
+    if use_parts is None:
+        use_parts = cfg.get("use-parts", False)
     chapters = resolve_chapters(bookdir, cfg)
     if not chapters:
         die("no chapter .md files found")
@@ -1232,7 +1248,7 @@ def build_html_chapter(bookdir, which):
                     "--section-divs",
                     f"--lua-filter={TEMPLATES / 'epub-wrap.lua'}",
                     "-o", str(html))
-    run_chapter_pandoc(cmd, [chapter], cwd=str(bookdir))
+    run_chapter_pandoc(cmd, [chapter], use_parts=use_parts, cwd=str(bookdir))
     print(f"✓ wrote {html}")
 
 
@@ -1553,9 +1569,6 @@ def main(argv=None):
                    help="estimated page count, to pick a KDP-appropriate gutter")
     b.add_argument("--keep", action="store_true",
                    help="keep intermediate .typ files in out/")
-    b.add_argument("--no-parts", action="store_true",
-                   help="treat top-level (#) headings as chapters, not parts "
-                        "(shifts every heading down one level)")
     b.add_argument("--build-id", default=None,
                    help="printing identifier (e.g. git short hash) shown on copyright page")
 
@@ -1568,9 +1581,6 @@ def main(argv=None):
                    help="estimated page count, to pick a KDP-appropriate gutter")
     d.add_argument("--keep", action="store_true",
                    help="keep intermediate .typ files in out/")
-    d.add_argument("--no-parts", action="store_true",
-                   help="treat top-level (#) headings as chapters, not parts "
-                        "(shifts every heading down one level)")
     d.add_argument("--build-id", default=None,
                    help="printing identifier (e.g. git short hash) shown on copyright page")
 
@@ -1583,9 +1593,6 @@ def main(argv=None):
                    help="estimated page count, to pick a KDP-appropriate gutter")
     a.add_argument("--keep", action="store_true",
                    help="keep intermediate .typ files in out/")
-    a.add_argument("--no-parts", action="store_true",
-                   help="treat top-level (#) headings as chapters, not parts "
-                        "(shifts every heading down one level)")
     a.add_argument("--no-check", dest="check", action="store_false",
                    help="skip running epubcheck on the EPUB")
     a.add_argument("--build-id", default=None,
@@ -1611,6 +1618,13 @@ def main(argv=None):
     h.add_argument("--build-id", default=None,
                    help="accepted for wrapper parity (build.sh stamps every "
                         "build); not stamped on web output")
+
+    for parser in (b, d, a, e, h):
+        group = parser.add_mutually_exclusive_group()
+        group.add_argument("--use-parts", action="store_true", default=None,
+                           help="use # for parts and ## for chapters (default: # for chapters)")
+        group.add_argument("--no-parts", dest="use_parts", action="store_false",
+                           default=None, help=argparse.SUPPRESS)
 
     i = sub.add_parser("import", parents=[common],
                        help="import a .docx into chapters/*.md")
@@ -1645,33 +1659,33 @@ def main(argv=None):
     if args.cmd == "print":
         build_print(Path(args.bookdir), pages=args.pages, keep=args.keep,
                     build_id=args.build_id, links="print", include_cover=False,
-                    no_parts=args.no_parts)
+                    use_parts=args.use_parts)
     elif args.cmd == "pdf":
         build_print(Path(args.bookdir), pages=args.pages, keep=args.keep,
                     build_id=args.build_id, links="live", include_cover=True,
-                    no_parts=args.no_parts)
+                    use_parts=args.use_parts)
     elif args.cmd == "all":
         bd = Path(args.bookdir)
         build_print(bd, pages=args.pages, keep=args.keep,
                     build_id=args.build_id, links="print", include_cover=False,
-                    no_parts=args.no_parts)
+                    use_parts=args.use_parts)
         build_print(bd, pages=args.pages, keep=args.keep,
                     build_id=args.build_id, links="live", include_cover=True,
-                    no_parts=args.no_parts)
-        build_html(bd)
-        build_epub(bd, check=args.check, build_id=args.build_id)
+                    use_parts=args.use_parts)
+        build_html(bd, use_parts=args.use_parts)
+        build_epub(bd, check=args.check, build_id=args.build_id, use_parts=args.use_parts)
     elif args.cmd == "epub":
-        build_epub(Path(args.bookdir), check=args.check, build_id=args.build_id)
+        build_epub(Path(args.bookdir), check=args.check, build_id=args.build_id, use_parts=args.use_parts)
     elif args.cmd == "html":
         mode, rest = args.mode, args.rest
         if mode == "toc":
-            build_html_toc(Path(rest[0] if rest else "."))
+            build_html_toc(Path(rest[0] if rest else "."), use_parts=args.use_parts)
         elif mode == "chapter":
             if not rest:
                 die("usage: bf html chapter NN [bookdir]")
-            build_html_chapter(Path(rest[1] if len(rest) > 1 else "."), rest[0])
+            build_html_chapter(Path(rest[1] if len(rest) > 1 else "."), rest[0], use_parts=args.use_parts)
         else:
-            build_html(Path(mode if mode is not None else "."))
+            build_html(Path(mode if mode is not None else "."), use_parts=args.use_parts)
     elif args.cmd == "import":
         import_docx(Path(args.docx), Path(args.bookdir),
                     split=args.split, force=args.force)

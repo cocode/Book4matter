@@ -28,10 +28,12 @@ end
 function Pandoc(doc)
   -- Collect top-level entries; each carries an optional list of sub-entries.
   local entries = pandoc.List({})
+  local has_part = false
   for _, blk in ipairs(doc.blocks) do
     if blk.t == "Header" and (blk.level == 1 or blk.level == 2)
         and not is_unlisted(blk) then
-      if blk.level == 1 or #entries == 0 then
+      if blk.level == 1 then has_part = true end
+      if blk.level == 1 or not has_part then
         -- A level-1 heading, or a level-2 that appears before any level-1
         -- (no parent to nest under): becomes a top-level entry.
         entries:insert({ title = delink(blk.content), subs = pandoc.List({}) })

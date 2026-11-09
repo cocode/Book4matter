@@ -63,16 +63,13 @@ novel (nothing to list). Set it explicitly to force the issue either way. The
 Contents lists parts and chapters; a front-matter chapter shows its roman folio.
 EPUB and whole-book HTML always get a generated navigation structure from Pandoc.
 
-**`no-parts`** --- *PDF outputs only.* When `true`, treat top-level `#` headings
-as chapters rather than parts, shifting every heading down one level (`#` →
-chapter, `##` → section, ...). Use it for a book that has chapters but no parts
-and writes `#` for the chapter. Defaults to `false`, though a book that uses no
-`##` anywhere is read this way regardless (see the Novels and Flat Books chapter).
-The `--no-parts` command-line flag does the same thing.
+**`use-parts`** --- Defaults to `false`. A `#` heading starts a chapter and
+`##` starts a section within it. Set `use-parts: true` to use `#` for parts
+and `##` for chapters in every output. The `--use-parts` flag enables this
+layout for a single build.
 
 **`toc-depth`** --- How many heading levels the Contents includes. `2` (the
-default) lists parts and chapters; `3` also lists topics (level-3 `###`
-headings), set smaller and nested under their chapter. Applies to print, digital
+default) lists parts and chapters; `3` also lists sections within chapters, set smaller and nested under their chapter. Applies to print, digital
 PDF, EPUB, and HTML.
 
 **`running-heads`** --- *PDF outputs only.* When `true`, body pages carry a

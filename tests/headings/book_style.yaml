@@ -7,3 +7,5 @@ margins:
 font: Libertinus Serif
 font-size: 11pt
 toc: true
+
+use-parts: true

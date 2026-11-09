@@ -21,8 +21,9 @@ nothing but words and scene breaks.
 
 ## Novels and non-fiction alike
 
-Treat top-level headings as *parts* (or sections) with chapters beneath, or flip a switch and
-let them be [numbered chapters in a novel](https://book4matter.com/examples/docs/book4matter.html#novels-and-flat-books) with no visible headings at all.
+Use `#` for a chapter and `##` for a section within it. For a book with parts,
+pass `--use-parts` to make `#` a part and `##` a chapter. A novel can also use
+[numbered chapters with no titles](https://book4matter.com/examples/docs/book4matter.html#novels-and-flat-books).
 
 ## Import from Word
 

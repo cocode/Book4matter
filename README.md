@@ -93,9 +93,10 @@ binding a book by hand. See the `impose` command in the [documentation](./docs).
 
 ## Heading conventions
 
-- `# Title` (H1) is a **part**, aka a book section: it gets a divider page and an automatic
-  "PART N" label. `## Title` (H2) is a **chapter** ("CHAPTER N"); chapter
-  numbers run straight through part boundaries.
+- By default, `# Title` starts a chapter and `## Title` starts a section within it.
+- To group chapters into parts, pass `--use-parts` when building or set
+  `use-parts: true` in `book_style.yaml`. Then `# Title` opens a part and
+  `## Title` opens a chapter. Chapter numbering continues across parts.
 - Text written directly beneath a part heading (before the next heading —
   in practice, under the title in the part's own file) prints on the divider
   page itself, beneath the part title.
@@ -106,8 +107,6 @@ binding a book by hand. See the `impose` command in the [documentation](./docs).
 - `{.unnumbered}` on a part or chapter heading suppresses its auto label
   without advancing the count; `{.new-page}` forces a page break before a
   heading.
-- 
-  You can elect not to use Parts. See the documentation for details.
 
 ## Images
 

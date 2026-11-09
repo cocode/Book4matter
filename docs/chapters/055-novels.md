@@ -6,25 +6,10 @@ often with no titles at all, just numbers, and no parts above them. Book4matter
 has a low-friction path for exactly this, so that a book with the least possible
 structure needs the least possible formatting.
 
-### There is no such thing as parts without chapters
+### Chapters and scenes
 
-A book can have chapters and no parts, but never parts and no chapters. So when a
-manuscript uses no `##` headings anywhere, book4matter reads `#` as **chapter**,
-not part --- a plain chaptered book, arabic page numbers from page one, no
-divider pages. You write `#` for each chapter title and nothing else. This
-happens on its own; there is no flag to set.
-
-### `--no-parts`: when you *do* use `##` inside a chapter
-
-Some authors naturally write `#` for a chapter and `##` for a heading *within*
-that chapter. Left alone, book4matter would read those as parts and chapters. Pass
-`--no-parts` (or set `no-parts: true` in `book_style.yaml`) and every heading
-shifts down one level: `#` becomes a chapter, `##` a section, `###` a subsection,
-and so on. No part dividers are produced.
-
-```
-./run.sh print my-novel/ --no-parts
-```
+Write `#` for each chapter title. Within a chapter, use `##` for a titled
+scene or section. This is the default for every book.
 
 ### Files with no heading become numbered chapters
 
@@ -79,7 +64,7 @@ alongside the numbered chapters.
 
 If instead *every* file has a `#` title, they are all ordinary titled chapters,
 numbered straight through --- the titled-chapter novel, or any chaptered
-non-fiction book built with `--no-parts`.
+non-fiction book using the default layout.
 
 ### The bundled novel
 

@@ -11,9 +11,11 @@ Examples:
 
 You can find complete documentation [here](https://garrettgman.github.io/rmarkdown/authoring_pandoc_markdown.html).
 
-Markdown heading levels are how you give a book its structure. Book4matter reads
-them as a hierarchy and supplies the "PART" and "CHAPTER" labels, the page
-breaks, and the numbering for you --- you write only the titles.
+By default, write `#` for a chapter, `##` for a section within it, and `###`
+for a subsection. Book4matter supplies the chapter numbers and page breaks.
+
+To group chapters into parts, pass `--use-parts` or set `use-parts: true` in
+`book_style.yaml`. The table and examples below use this option.
 
 | Markdown | Becomes | On the page |
 |---|---|---|
@@ -41,10 +43,8 @@ where an introduction or preface belongs:
 ## Introduction {.unnumbered}
 ```
 
-A book with no parts at all is simpler still: every `##` is a chapter and arabic
-page numbers run from page one. And a book that writes `#` for its chapters ---
-with no parts above them --- is handled too; see the Novels and Flat Books
-chapter for that and for numbered, title-less chapters.
+In the default chapter-only layout, arabic page numbering starts at the first
+chapter. See Novels and Flat Books for chapters with just a number as their title.
 
 ### Two small switches
 
