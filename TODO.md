@@ -6,6 +6,8 @@ Change color scheme
 
 Make icon - looks like we have one. An alternative might be letters falling onto a books pages, like snow (maybe falling like the matrix)
 
+The website has too much documentation in it. It should be a feature overview, and a quick start. The rest should link to/ be in the docs
+
 
 Edit freely; Claude reads and writes it on request.
 
