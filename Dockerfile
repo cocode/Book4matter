@@ -21,6 +21,9 @@ RUN set -eu; \
       wget -qO "wrap-it/$f" "https://raw.githubusercontent.com/typst/packages/5cc3aea920a51531fa0f038ac48cce6861f4c406/packages/preview/wrap-it/0.1.1/$f"; \
     done
 
+RUN wget -qO epubcheck-5.2.1.zip https://github.com/w3c/epubcheck/releases/download/v5.2.1/epubcheck-5.2.1.zip && \
+    echo '0532f6291faa2bb729dd253f958868a2a57dbd2c32f881a97c7c980c5940309e  epubcheck-5.2.1.zip' | sha256sum -c -
+
 # Keep the base digest and both APT snapshots fixed between deliberate upgrades.
 FROM debian:bookworm-20261005-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587
 # Bootstrap HTTPS before APT can install Debian's certificate bundle.
@@ -41,9 +44,8 @@ RUN --mount=type=bind,from=downloads,source=/artifacts,target=/artifacts \
 
 COPY --from=downloads /artifacts/typst /usr/local/bin/typst
 COPY --from=downloads /artifacts/wrap-it /root/.cache/typst/packages/preview/wrap-it/0.1.1/
-RUN --mount=type=bind,source=vendor,target=/vendor \
-    echo '0532f6291faa2bb729dd253f958868a2a57dbd2c32f881a97c7c980c5940309e  /vendor/epubcheck-5.2.1.zip' | sha256sum -c - && \
-    unzip -q /vendor/epubcheck-5.2.1.zip -d /opt && \
+RUN --mount=type=bind,from=downloads,source=/artifacts,target=/artifacts \
+    unzip -q /artifacts/epubcheck-5.2.1.zip -d /opt && \
     printf '#!/bin/sh\nexec java -jar /opt/epubcheck-5.2.1/epubcheck.jar "$@"\n' > /usr/local/bin/epubcheck && \
     chmod +x /usr/local/bin/epubcheck && \
     ln -s /opt/epubcheck-5.2.1/epubcheck.jar /opt/epubcheck.jar
