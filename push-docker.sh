@@ -12,9 +12,9 @@ fi
 
 # Finish creating the context before starting the push. Only committed files
 # are included, even if the working tree changes during the build.
-archive=$(mktemp "${TMPDIR:-/tmp}/book4matter-release.XXXXXXXX")
-trap 'rm -f -- "$archive"' EXIT
-git archive --format=tar "$revision" > "$archive"
+context=$(mktemp -d "${TMPDIR:-/tmp}/book4matter-release.XXXXXXXX")
+trap 'rm -rf -- "$context"' EXIT
+git archive --format=tar "$revision" | tar -xf - -C "$context"
 
 image=book4matter/book4matter
 docker buildx build \
@@ -23,4 +23,4 @@ docker buildx build \
   --tag "$image:$revision" \
   --tag "$image:latest" \
   --label "org.opencontainers.image.revision=$revision" \
-  --push - < "$archive"
+  --push "$context"
