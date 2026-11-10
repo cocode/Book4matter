@@ -1,6 +1,6 @@
 """bf - turn Markdown into a KDP print-ready PDF or a KDP-ready EPUB.
 
-Runs inside the pandoc/typst Docker image. Subcommands:
+Runs inside the Book4matter Docker image. Subcommands:
 
     bf print  [bookdir] [--pages N] [--keep]
     bf all    [bookdir]                 (print + digital PDF + html + epub)

@@ -20,6 +20,8 @@ Using Markdown rather than plain text will give you more control of the output, 
 - **book4matter cmd with Docker** uses the published image. [Docker instructions](https://book4matter.com/examples/docs/book4matter.html#option-1-the-docker-hub-image)
 - **book4matter cmd from source** runs on your computer with local dependencies. [Source instructions](https://book4matter.com/examples/docs/book4matter.html#option-2-install-directly-without-docker)
 
+To rebuild the Docker image from this checkout, run `./run.sh --rebuild`. The runtime uses Debian 12 (Bookworm) slim. The Dockerfile pins the base image by digest and fixes both the Debian and Debian Security package repositories to dated snapshots.
+
 ## Documentation
 
 The [user manual](https://book4matter.com/examples/docs/book4matter.html) covers both web and cmd. Jump to
