@@ -66,3 +66,39 @@ table { display: block; max-width: 100%; overflow-x: auto; }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
 }
+
+/* The controls occupy the first row, with the open landmark directly below. */
+.book-navigation {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  justify-items: start;
+  column-gap: 0.5rem;
+  padding: 0.4rem 0.75rem;
+  border-bottom: 1px solid var(--rule, #ddd8ce);
+  font: 1rem/1.4 system-ui, sans-serif;
+}
+.book-navigation > button {
+  grid-row: 1;
+  min-height: 44px;
+  padding: 0 0.8rem;
+  border: 1px solid transparent;
+  border-radius: 0.4rem;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.book-navigation > button[aria-expanded="true"] {
+  background: var(--accent-bg, #e9eef5);
+}
+.book-navigation > button:focus-visible { outline: 2px solid currentColor; }
+.book-navigation > nav {
+  justify-self: stretch;
+  min-width: 0;
+  grid-column: 1 / -1;
+  grid-row: 2;
+}
+.book-navigation > nav[hidden] { display: none; }
+.book-navigation > .site-nav { display: flex; flex-direction: column; }
+.book-navigation > #TOC { margin: 0; }
+.book-navigation > #TOC::before { display: none; }

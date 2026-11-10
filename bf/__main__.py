@@ -1151,6 +1151,8 @@ def build_html(bookdir, use_parts=None):
                'max-width:min(100%,28rem);max-height:90vh;height:auto;" />\n')
         text = re.sub(r"(<body[^>]*>)", lambda m: m.group(1) + "\n" + img,
                       text, count=1)
+    navigation = (TEMPLATES / "html-navigation.js").read_text()
+    text = text.replace("</body>", f"<script>\n{navigation}</script>\n</body>", 1)
     # Optional HTML-only include, spliced in verbatim just before </body>. This
     # is where an end-of-body script belongs -- a web-analytics snippet, say.
     # The file's contents are injected as-is (raw HTML/JS), and the key is read

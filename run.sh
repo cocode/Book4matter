@@ -108,4 +108,8 @@ if [[ "$cmd" != "impose" ]]; then
   done
 fi
 
-exec docker run --rm "${mounts[@]}" -w /work "$IMAGE" "$@"
+# Load the formatter and its matching templates from this checkout, including
+# when /work is a separate book directory and the image predates a template.
+exec docker run --rm "${mounts[@]}" \
+  -v "$HERE/bf:/opt/bf:ro" -v "$HERE/templates:/opt/templates:ro" \
+  -w /work "$IMAGE" "$@"
