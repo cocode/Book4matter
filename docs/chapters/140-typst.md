@@ -13,7 +13,7 @@ Why route PDF output through Typst at all? Because Typst alone cannot produce
 EPUB, and authoring straight in Typst would forfeit the EPUB and HTML outputs.
 With Pandoc in the middle, all four outputs come from the same Markdown. Typst
 earns its place on the page-layout side: it is fast, needs no enormous TeX
-installation, embeds fonts automatically, and ships in the same `pandoc/typst`
+installation, embeds fonts automatically, and ships alongside Pandoc in the Book4matter
 image.
 
 ### What a PDF build generates

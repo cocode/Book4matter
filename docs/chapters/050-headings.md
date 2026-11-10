@@ -11,19 +11,19 @@ Examples:
 
 You can find complete documentation [here](https://garrettgman.github.io/rmarkdown/authoring_pandoc_markdown.html).
 
-By default, write `#` for a chapter, `##` for a section within it, and `###`
-for a subsection. Book4matter supplies the chapter numbers and page breaks.
-
-To group chapters into parts, pass `--use-parts` or set `use-parts: true` in
-`book_style.yaml`. The table and examples below use this option.
+By default, a book starts with chapters. Book4matter numbers them automatically.
 
 | Markdown | Becomes | On the page |
 |---|---|---|
-| `#` | **Part** | Its own divider page, an auto "PART N" label, the title set a third of the way down |
-| `##` | **Chapter** | A fresh page with an auto "CHAPTER N" label and a large heading |
-| `###` | Section | A bold heading, spaced from the text above it |
-| `####` | Subsection | A smaller bold heading |
-| `#####` / `######` | Minor heading | Regular weight, still set apart from the body |
+| `#` | **Chapter** | A numbered chapter on a new page |
+| `##` | Section | A bold heading above the text |
+| `###` | Subsection | A smaller bold heading |
+| `####` to `######` | Minor heading | Regular weight, set apart from the body text |
+
+With `use-parts: true` in `book_style.yaml` (or `--use-parts` in book4matter cmd),
+`# Part Title` opens a part and `# Afterword {.section}` opens a top-level section.
+Each level in the table takes one more `#`, so `##` starts a chapter, `###` a section,
+and `####` a subsection. The examples below use this layout.
 
 ### Numbering takes care of itself
 
