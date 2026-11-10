@@ -13,7 +13,7 @@
 This is the **Book4matter User Manual**: documentation for writing, configuring,
 and publishing your books.
 
-*Book4matter* turns a folder of text formatted with Markdown into four outputs: a PDF for print
+*Book4matter* turns a manuscript into four outputs: a PDF for print
 ready for Amazon Kindle Direct Publishing (KDP), a PDF for screens to send to
 readers, an EPUB for e-readers, and a standalone HTML page for the web. You
 write once, in plain Markdown, and the same source produces all four.
@@ -30,9 +30,9 @@ Book4matter is a tool used to format the books for self-publishing. You
 write in Markdown, simple text with a few simple options. Then you can distribute
 it as PDF, EPUB, or HTML, or upload the print version to Amazon KDP for printing.
 
-It is a command-line tool, run inside Docker, and it is happiest in the hands of
-someone comfortable with a terminal. It is deliberately small: it does the
-typesetting a self-publisher actually needs and stops there.
+Use [book4matter web](https://app.book4matter.com/) in your browser or run
+book4matter cmd on your computer. This manual covers the manuscript markup,
+book settings, and output formats for both.
 
 ### What it does not do
 
@@ -55,23 +55,3 @@ drifting apart.
 The chapters that follow take you from a first build (Part One) through writing
 (Part Two) and configuration (Part Three) to the decisions and machinery behind
 the output (Part Four).
-
-### Building Your Book
-
-The commands to build your book are simple:
-
-```
-# This manual, as a 6x9 print interior PDF.
-./run.sh print docs/
-# The same pages as a digital PDF, with live links.
-./run.sh pdf docs/
-# The same book as an EPUB.
-./run.sh epub docs/
-# The same book as one HTML page.
-./run.sh html docs/
-
-# The same book, four pages per sheet, formatted for folding and binding.
-./run.sh impose docs/out/book4matter-interior.pdf
-```
-
-

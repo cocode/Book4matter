@@ -1,5 +1,4 @@
 # Getting Started
 
-Three commands and a folder of Markdown stand between you and a finished book.
-This part installs the tool, explains the shape of a book4matter project, and
-walks the first build from Markdown all the way to a print-ready PDF.
+Choose how you want to format your book. You can start with a single manuscript
+in book4matter web or use book4matter cmd to build a project on your computer.

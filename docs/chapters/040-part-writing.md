@@ -5,21 +5,18 @@ Markdown into a properly structured book: how headings become parts and
 chapters, how images are placed and sized, and how tables, quotes, and notes are
 set. This part covers all three.
 
-## Project Quickstart
+## Start a book from an example {#project-quickstart}
 
-See [Installing and Building](#installing-and-building) for setup instructions.
+If you want a project with chapters and settings already in place, start with
+one of the [example projects](https://github.com/cocode/Book4matter).
+For a single manuscript in book4matter web, you can go straight to [Markdown](#markdown).
 
-A fast way to get started is to copy one of the provided examples, and then modify it
-to suit your needs.
+1. Copy the `example/` or `novel/` folder and give your copy a new name.
+2. Try the example as supplied so you can see how the finished book looks.
+3. Replace the files in `chapters/` with your manuscript.
+4. Set your title and author in `book_metadata.yaml`.
+5. To change the appearance, edit `book_style.yaml`.
 
-1) Copy one of the examples to a new folder
-2) Build it unmodified, in this folder.
-    * Then you'll know everything works, before you start.
-2) Copy your text into the ./chapters directory
-3) Build your version, and see how it looks
-4) Put your information into book_metadata.yaml
-    * Author name, title, etc.
-5) If you want, change the look of your book
-    * Edit book_style.yaml
-
-
+Now build your copy using the [command for your setup](#installing-and-building),
+or drop the edited folder into [book4matter web](https://app.book4matter.com/)
+and choose an output format.

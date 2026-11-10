@@ -70,9 +70,5 @@ non-fiction book using the default layout.
 
 The repository ships a second example, `novel/`, alongside the `example/` book. It
 is a very short fable with no titles, no parts, and no markup --- just numbered
-`.txt` chapters --- so you can see the whole of this chapter at work:
-
-```
-# Writes novel/out/the-smallest-fire-interior.pdf.
-./run.sh print novel/
-```
+`.txt` chapters --- so you can see the whole of this chapter at work.
+Build the `novel/` folder with your chosen cmd setup, or add it to book4matter web.

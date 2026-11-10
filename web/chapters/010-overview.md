@@ -17,18 +17,9 @@ It was built to take a manuscript to Amazon KDP without worrying about formattin
 
 
 
-Book4matter is available as a web app, a prebuilt docker container and as source. 
-
-The web version is at [app.book4matter.com](http://app.book4matter.com).
-
-Source for web version: [Book4matter-web GitHub](https://github.com/cocode/book4matter-web).
-
-You can get a docker container for Book4matter with
-
-```docker pull book4matter/book4matter```
-
-Or just pull the source, and install it locally. 
-Source for command line version: [Book4matter GitHub](https://github.com/cocode/Book4matter/)
+Use [book4matter web](https://app.book4matter.com/) in your browser, or run
+book4matter cmd with the published Docker image or a direct source installation.
+See [Quick start](#quick-start) to choose your setup.
 
 Read the [full user manual](https://book4matter.com/examples/docs/book4matter.html).
 

@@ -1,23 +1,19 @@
 ## Command-Line Reference
 
-Every command runs through `run.sh`, which builds the Docker image if it is
-missing and then runs the tool with your current directory mounted inside the
-container. The general form is:
+The examples below show the command and its arguments. For a direct installation,
+put `python3 -m bf` before the command. With Docker, put
+`docker run --rm -v "$PWD":/work book4matter/book4matter` before it and use
+paths inside the mounted directory. See [setup and first build](#installing-and-building)
+for complete invocations.
 
-```
-./run.sh [--rebuild] <command> [arguments]
-```
-
-`--rebuild` forces the image to be rebuilt first --- do this after changing a
-template or updating the tool. The commands are `print`, `pdf`, `epub`, `html`,
-`import`, and `impose`. For the book-building commands, `bookdir` defaults to the
+For the book-building commands, `bookdir` defaults to the
 current directory. By default, `#` starts a chapter and `##` starts a section.
 The `print`, `pdf`, `epub`, `html`, and `all` commands accept `--use-parts`.
 
 ### print
 
 ```
-./run.sh print [bookdir] [--pages N] [--keep] [--use-parts] [--build-id ID]
+print [bookdir] [--pages N] [--keep] [--use-parts] [--build-id ID]
 ```
 
 Builds the print interior PDF to `bookdir/out/<title>-interior.pdf`. Use this
@@ -42,7 +38,7 @@ destination, as in `CLICK HERE (https://www.example.com)`.
 ### pdf
 
 ```
-./run.sh pdf [bookdir] [--pages N] [--keep] [--use-parts] [--build-id ID]
+pdf [bookdir] [--pages N] [--keep] [--use-parts] [--build-id ID]
 ```
 
 Builds a digital PDF to `bookdir/out/<title>.pdf`. Use this when you will send
@@ -61,7 +57,7 @@ includes it as the first page.
 ### epub
 
 ```
-./run.sh epub [bookdir] [--no-check] [--build-id ID]
+epub [bookdir] [--no-check] [--build-id ID]
 ```
 
 Builds an EPUB 3 to `bookdir/out/<title>.epub`. The result is validated with
@@ -77,11 +73,11 @@ The EPUB cover, if any, comes from the `cover:` key in `book_metadata.yaml`.
 
 ```
 # Whole book: one standalone page with a clickable table of contents.
-./run.sh html [bookdir]
+html [bookdir]
 # Just the contents, as a link-free fragment.
-./run.sh html toc [bookdir]
+html toc [bookdir]
 # One chapter, as an HTML fragment.
-./run.sh html chapter NN [bookdir]
+html chapter NN [bookdir]
 ```
 
 - The whole-book form is a single self-contained page (resources embedded) with a
@@ -101,7 +97,7 @@ The EPUB cover, if any, comes from the `cover:` key in `book_metadata.yaml`.
 ### impose
 
 ```
-./run.sh impose <file.pdf> [--paper P] [--signature N] \
+impose <file.pdf> [--paper P] [--signature N] \
   [--single] [--margin INCHES] [-o NAME]
 ```
 
@@ -131,7 +127,7 @@ at the centre of the sheet.
 For example, this makes four-sheet signatures on A4 paper:
 
 ```
-./run.sh impose docs/out/book4matter-interior.pdf --paper a4 --signature 4
+impose docs/out/book4matter-interior.pdf --paper a4 --signature 4
 ```
 
 Print a signature first to check page order and duplex orientation before
@@ -151,7 +147,7 @@ printing the whole book.
 ### import
 
 ```
-./run.sh import <file.docx> [bookdir] [--no-split] [--force]
+import <file.docx> [bookdir] [--no-split] [--force]
 ```
 
 Converts a Word manuscript into `chapters/*.md` plus an extracted `media/`
@@ -166,11 +162,9 @@ The Importing from Word chapter covers this in full.
 
 `--build-id` is how you make a given printing identifiable. Compute the value
 once --- usually the repository's short git hash --- and pass it to the outputs
-that stamp it. This manual's own `build.sh` does exactly that:
+that stamp it. For example,
+with a source installation:
 
 ```
-BUILD_ID="$(git rev-parse --short=10 HEAD)"
-./run.sh print docs/ --build-id "$BUILD_ID"
-./run.sh pdf docs/ --build-id "$BUILD_ID"
-./run.sh epub docs/ --build-id "$BUILD_ID"
+python3 -m bf print docs/ --build-id proof-1
 ```

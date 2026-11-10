@@ -1,11 +1,8 @@
 ## Editing the Templates
 
 Beyond fonts and the `book_style.yaml` knobs, the look is governed by the
-templates baked into the Docker image. You can change them, with one thing
-understood up front: **there is no theme or plugin system.** Customizing the
-templates means editing the project's own template files and rebuilding the
-image. The change then applies to every book you build with that image, so this
-is the path for shaping *your* house style, not for per-book themes.
+files in the repository's `templates/` directory. Editing a template changes
+the output for every book built with that copy of the templates.
 
 ### The files
 
@@ -22,13 +19,9 @@ is the path for shaping *your* house style, not for per-book themes.
 
 ### Applying a change
 
-The templates live inside the image, so after editing one, rebuild:
-
-```
-./run.sh --rebuild print mybook/
-```
-
-Until you rebuild, the old templates are what run.
+With a source installation, point `BF_TEMPLATES` at the edited directory and
+build your book again. For Docker development, see the
+[developer instructions](https://github.com/cocode/Book4matter/blob/main/README-DEV.md).
 
 ### What book.typ expects
 

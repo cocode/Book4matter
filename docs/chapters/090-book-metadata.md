@@ -5,6 +5,9 @@ matter how the book is styled. Every key is optional except `title`. Anything yo
 leave out (or set to an empty string) is simply omitted: no blank author, no
 empty copyright line.
 
+**book4matter web.** `book_metadata.yaml` is optional. To use the settings in this file,
+upload it along with your chapter files. The files you upload determine which chapters are included.
+
 **`title`** --- The book's title; defaults to "Untitled". A `\n` in the value
 stacks the title across lines on the print title page --- `"The\nRotary\nWaltz"`
 sets three lines --- while everywhere else (PDF metadata, EPUB, HTML, running
@@ -104,7 +107,8 @@ Omit the key and nothing is tracked. How to write the `{...}` tokens themselves
 
 ### Listing chapters explicitly
 
-By default every file in `chapters/` is built, in natural filename order. To fix
+In book4matter web, the chapters you add are used in natural filename order.
+In book4matter cmd, by default every file in `chapters/` is built, in natural filename order. To fix
 the order by hand instead, list the files under `chapters:`, relative to the book
 directory; only those files, in that order, are built. A listed file that does
 not exist stops the build.

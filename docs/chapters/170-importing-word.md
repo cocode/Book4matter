@@ -1,11 +1,13 @@
 ## Importing from Word
 
-Many manuscripts begin life in Microsoft Word. The `import` command converts a
+You can add a `.docx` directly in book4matter web. In book4matter cmd, the `import` command converts a
 `.docx` into the Markdown this pipeline expects, so you can start from an existing
 draft instead of retyping it.
 
+For example, from a source installation:
+
 ```
-./run.sh import manuscript.docx mybook/
+python3 -m bf import manuscript.docx mybook/
 ```
 
 ### What it does

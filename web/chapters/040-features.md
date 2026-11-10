@@ -22,7 +22,7 @@ nothing but words and scene breaks.
 ## Novels and non-fiction alike
 
 Use `#` for a chapter and `##` for a section within it. For a book with parts,
-pass `--use-parts` to make `#` a part and `##` a chapter. A novel can also use
+set `use-parts: true` in `book_style.yaml` to make `#` a part and `##` a chapter. A novel can also use
 [numbered chapters with no titles](https://book4matter.com/examples/docs/book4matter.html#novels-and-flat-books).
 
 ## Import from Word
@@ -35,7 +35,3 @@ instead of a blank page.
 
 You can run everything from a pinned Docker image. No host installs, no network at
 build time, and the same inputs produce the same outputs on any machine.
-
-If you want more control, you can install locally, or you can build the docker image locally, and run that way.
-
-

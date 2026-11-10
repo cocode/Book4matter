@@ -5,6 +5,9 @@ little page furniture. Point several books at one style file and they share a
 look; restyle them all by editing that one file. Every key has a sensible
 default, so the smallest possible style file is no file at all.
 
+**book4matter web.** `book_style.yaml` is optional. To use the settings in this file,
+upload it along with your chapter files.
+
 **`trim`** --- The finished page size. Write it as `6x9` (inches), or as an
 explicit mapping for an unusual size. Defaults to `6x9`, the standard US trade
 paperback.
@@ -57,7 +60,7 @@ leaves the first paragraph after a heading flush and indents the rest (the
 trade-book convention, and what EPUB and HTML already do); `none` drops indents
 entirely and tells paragraphs apart by the space between them. Defaults to `all`.
 
-**`toc`** --- Whether to include the Contents page in the PDF outputs. Defaults
+**[`toc`]{#contents-settings}** --- Whether to include the Contents page in the PDF outputs. Defaults
 to `true` for a book that has any titles, and to `false` for a wholly un-titled
 novel (nothing to list). Set it explicitly to force the issue either way. The
 Contents lists parts and chapters; a front-matter chapter shows its roman folio.
