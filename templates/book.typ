@@ -936,7 +936,7 @@
       #v(2em)
       #text(font: meta.heading-font, size: 2em)[Contents]
       #v(0.5em)
-      #line(length: 100%, stroke: 0.6pt)
+      #line(length: 100%, stroke: 0.75pt)
       // Outline entries reuse heading content. Keep their visible text, but
       // suppress definition metadata and labels at this rendering location.
       #term-navigation.update(true)
